@@ -9,6 +9,8 @@ import BusinessProfilePage from '../pages/profile/BusinessProfilePage';
 import SettingsPage from '../pages/settings/SettingsPage';
 import MediaPage from '../pages/media/MediaPage';
 import PricingPage from '../pages/settings/PricingPage';
+import ReviewButlerPage from '../pages/reviews/ReviewButlerPage';
+import MicrositePage from '../pages/settings/MicrositePage';
 
 export const router = createBrowserRouter([
   {
@@ -53,6 +55,14 @@ export const router = createBrowserRouter([
       {
         path: '/pricing',
         element: <PricingPage />,
+      },
+      {
+        path: '/reviews',
+        element: <ReviewButlerPage />,
+      },
+      {
+        path: '/microsite',
+        element: <MicrositePage />,
       },
     ],
   },

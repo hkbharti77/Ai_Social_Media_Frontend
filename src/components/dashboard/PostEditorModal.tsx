@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   X, Save, Link as LinkIcon, Share2, Loader2, Image as ImageIcon,
-  Sparkles, Hash, Calendar, CheckCircle2, Download
+  Sparkles, Hash, Calendar, CheckCircle2, Download, Plus
 } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { cn } from '../../lib/utils';
@@ -173,21 +173,23 @@ const PostEditorModal: React.FC<PostEditorModalProps> = ({ isOpen, onClose, onSa
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {/* Platform */}
                     <div className="space-y-3">
-                      <label className="text-xs font-black uppercase tracking-[0.2em] text-muted-foreground px-1">Platform</label>
+                      <label className="text-xs font-black uppercase tracking-[0.2em] text-muted-foreground px-1">Platform Target</label>
                       <div className="flex bg-secondary/20 p-2 rounded-2xl border border-white/5">
                         {(['FACEBOOK', 'INSTAGRAM'] as const).map((p) => (
                           <button
                             key={p}
                             onClick={() => setPlatform(p)}
                             className={cn(
-                              'flex-1 flex items-center justify-center gap-2 py-3.5 rounded-xl transition-all duration-300 text-xs font-black',
+                              'flex-1 flex items-center justify-center gap-2 py-4 rounded-xl transition-all duration-500 text-[10px] font-black uppercase tracking-widest',
                               platform === p
-                                ? 'bg-background shadow-2xl text-primary scale-105'
-                                : 'text-muted-foreground hover:text-foreground'
+                                ? (p === 'INSTAGRAM' 
+                                    ? 'bg-gradient-to-tr from-amber-500 via-rose-500 to-purple-600 text-white shadow-rose-500/20 shadow-2xl scale-105' 
+                                    : 'bg-blue-600 text-white shadow-blue-500/20 shadow-2xl scale-105')
+                                : 'text-muted-foreground hover:text-foreground hover:bg-white/5'
                             )}
                           >
-                            {p === 'FACEBOOK' ? <LinkIcon size={16} /> : <Share2 size={16} />}
-                            {p === 'FACEBOOK' ? 'FB' : 'IG'}
+                            {p === 'FACEBOOK' ? <LinkIcon size={14} /> : <Share2 size={14} />}
+                            {p === 'FACEBOOK' ? 'Facebook' : 'Instagram'}
                           </button>
                         ))}
                       </div>
@@ -195,15 +197,20 @@ const PostEditorModal: React.FC<PostEditorModalProps> = ({ isOpen, onClose, onSa
 
                     {/* Status */}
                     <div className="space-y-3">
-                      <label className="text-xs font-black uppercase tracking-[0.2em] text-muted-foreground px-1">Status</label>
-                      <select
-                        value={status}
-                        onChange={(e) => setStatus(e.target.value)}
-                        className="w-full px-6 py-4 bg-secondary/20 border-2 border-white/5 rounded-2xl focus:border-primary/50 focus:outline-none appearance-none cursor-pointer font-black uppercase tracking-widest text-xs shadow-inner"
-                      >
-                        <option value={PostStatus.DRAFT}>Draft</option>
-                        <option value={PostStatus.SCHEDULED}>Schedule</option>
-                      </select>
+                      <label className="text-xs font-black uppercase tracking-[0.2em] text-muted-foreground px-1">Publishing Mode</label>
+                      <div className="relative group">
+                        <select
+                          value={status}
+                          onChange={(e) => setStatus(e.target.value)}
+                          className="w-full h-[60px] px-6 bg-secondary/20 border-2 border-white/5 rounded-2xl focus:border-primary/50 focus:outline-none appearance-none cursor-pointer font-black uppercase tracking-widest text-[11px] shadow-inner text-foreground/80"
+                        >
+                          <option value={PostStatus.DRAFT}>Draft (Save to Archive)</option>
+                          <option value={PostStatus.SCHEDULED}>Schedule (Auto-Transmit)</option>
+                        </select>
+                        <div className="absolute right-6 top-1/2 -translate-y-1/2 pointer-events-none text-muted-foreground/40">
+                          <Plus size={16} className="rotate-45" />
+                        </div>
+                      </div>
                     </div>
                   </div>
 
@@ -241,7 +248,10 @@ const PostEditorModal: React.FC<PostEditorModalProps> = ({ isOpen, onClose, onSa
                       Live on {platform === 'FACEBOOK' ? 'Facebook' : 'Instagram'}
                     </div>
                   </div>
-                  <div className="aspect-[4/5] bg-secondary/20 border-2 border-white/5 rounded-[3rem] overflow-hidden relative group shadow-2xl">
+                  <div className={cn(
+                    "bg-secondary/20 border-2 border-white/5 rounded-[3rem] overflow-hidden relative group shadow-2xl transition-all duration-700",
+                    platform === 'INSTAGRAM' ? "aspect-square" : "aspect-[4/5]"
+                  )}>
                     {imageUrl ? (
                       <img
                         src={imageUrl}

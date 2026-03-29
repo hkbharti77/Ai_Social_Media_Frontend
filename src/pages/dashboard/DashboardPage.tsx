@@ -17,8 +17,13 @@ import {
   Download,
   Link2,
   Sunrise,
-  Sunset
+  Sunset,
+  FileText,
+  Activity,
+  Loader2
 } from 'lucide-react';
+import { downloadMonthlyRoiReportApi } from '../../api/reports';
+import { getBestTimeApi, type BestTimeReport } from '../../api/insights';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '../../lib/utils';
@@ -42,6 +47,8 @@ const DashboardPage: React.FC = () => {
   const [recentMedia, setRecentMedia] = useState<{url: string, downloadUrl: string}[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('All');
+  const [bestTime, setBestTime] = useState<BestTimeReport | null>(null);
+  const [isDownloadingReport, setIsDownloadingReport] = useState(false);
   const navigate = useNavigate();
   
   // Modal state
@@ -51,7 +58,29 @@ const DashboardPage: React.FC = () => {
 
   useEffect(() => {
     fetchPosts();
+    fetchInsights();
   }, []);
+
+  const fetchInsights = async () => {
+    try {
+      const data = await getBestTimeApi();
+      setBestTime(data);
+    } catch (e) {
+      console.error("Failed to fetch best time insights", e);
+    }
+  };
+
+  const handleDownloadROI = async () => {
+    setIsDownloadingReport(true);
+    try {
+      await downloadMonthlyRoiReportApi();
+      toast.success("ROI Report generated!");
+    } catch (e) {
+      toast.error("Failed to generate report.");
+    } finally {
+      setIsDownloadingReport(false);
+    }
+  };
 
   const fetchPosts = async () => {
     setIsLoading(true);
@@ -151,17 +180,60 @@ const DashboardPage: React.FC = () => {
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-black tracking-tighter">Content Studio</h1>
             <p className="text-muted-foreground text-lg md:text-xl font-medium opacity-70 max-w-xl">Oversee and orchestrate your global presence.</p>
           </div>
-          <Button 
-            onClick={handleCreateNew}
-            className="w-full md:w-auto group px-10 h-16 text-xl font-black shadow-[0_20px_40px_rgba(var(--primary),0.2)] rounded-[1.5rem] active:scale-95 transition-all relative overflow-hidden"
-          >
-            <div className="absolute inset-0 bg-gradient-to-r from-primary to-blue-600 opacity-90 group-hover:opacity-100 transition-opacity" />
-            <div className="relative flex items-center justify-center gap-3">
-              <Plus size={24} />
-              Create Masterpiece
-            </div>
-          </Button>
+          <div className="flex flex-col md:flex-row gap-4 w-full md:w-auto">
+            <Button 
+              onClick={handleDownloadROI}
+              disabled={isDownloadingReport}
+              variant="outline"
+              className="group px-10 h-16 text-xs font-black uppercase tracking-widest border-2 border-white/10 rounded-[1.5rem] active:scale-95 transition-all bg-card/40 backdrop-blur-xl"
+            >
+              {isDownloadingReport ? <Loader2 className="animate-spin mr-2" /> : <FileText className="mr-2 text-primary" />}
+              Generate ROI PDF
+            </Button>
+            <Button 
+              onClick={handleCreateNew}
+              className="group px-10 h-16 text-xl font-black shadow-[0_20px_40px_rgba(var(--primary),0.2)] rounded-[1.5rem] active:scale-95 transition-all relative overflow-hidden"
+            >
+              <div className="absolute inset-0 bg-gradient-to-r from-primary to-blue-600 opacity-90 group-hover:opacity-100 transition-opacity" />
+              <div className="relative flex items-center justify-center gap-3">
+                <Plus size={24} />
+                Create Masterpiece
+              </div>
+            </Button>
+          </div>
         </header>
+
+        {/* Best Time Engine - High Visibility Card */}
+        {bestTime && (
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="grid grid-cols-1 lg:grid-cols-12 gap-8"
+          >
+            <div className="lg:col-span-12 bg-primary/10 border-2 border-primary/20 p-8 rounded-[2.5rem] flex items-center justify-between gap-8 relative overflow-hidden group">
+              <div className="absolute right-0 top-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity">
+                <Activity size={120} className="text-primary" />
+              </div>
+              <div className="flex items-center gap-8 relative z-10">
+                <div className="w-20 h-20 bg-primary/20 rounded-3xl flex items-center justify-center text-primary shadow-2xl border border-primary/30">
+                  <Clock size={40} className="animate-pulse" />
+                </div>
+                <div className="space-y-1">
+                  <h3 className="text-3xl font-black tracking-tighter uppercase italic text-primary">Best Time Engine</h3>
+                  <p className="text-muted-foreground font-bold text-sm">Followers are most active at <span className="text-foreground">{bestTime.hour}:00</span> on <span className="text-foreground">{bestTime.dayName}</span>.</p>
+                </div>
+              </div>
+              <div className="hidden md:flex flex-col items-end relative z-10">
+                <p className="text-[10px] font-black uppercase tracking-widest text-primary/60 mb-2">Confidence Level</p>
+                <div className="flex items-center gap-2">
+                   {[1, 2, 3, 4, 5].map((i) => (
+                    <div key={i} className={cn("w-3 h-8 rounded-full", i <= 4 ? "bg-primary" : "bg-primary/20")} />
+                   ))}
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        )}
 
         {!isLoading && accounts.length === 0 && (
           <motion.div 

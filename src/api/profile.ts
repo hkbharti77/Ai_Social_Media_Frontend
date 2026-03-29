@@ -3,6 +3,7 @@ import axios from './axios';
 export interface ProfileData {
   id?: number;
   businessName: string;
+  brandSlug?: string;
   niche: string;
   targetAudience: string;
   brandTone: string;

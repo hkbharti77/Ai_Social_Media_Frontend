@@ -79,10 +79,16 @@ const ConnectAccountsPage: React.FC = () => {
         const fullPlatform = p.id === 'FB' ? 'FACEBOOK' : 'INSTAGRAM';
         const acc = accounts.find(a => a.platform.toUpperCase() === fullPlatform);
         if (!acc) return { ...p, connected: false, handle: null, accountName: undefined, profilePictureUrl: undefined, pageId: undefined, igBusinessAccountId: undefined };
+        
+        // Use accountName for handle if available, otherwise use ID
+        const displayHandle = acc.accountName 
+          ? (acc.platform === 'INSTAGRAM' ? `@${acc.accountName}` : acc.accountName)
+          : (acc.platform === 'INSTAGRAM' ? `IG: ${acc.igBusinessAccountId}` : `Page: ${acc.pageId}`);
+
         return {
           ...p,
           connected: true,
-          handle: acc.accountName || (acc.pageId ? `Page ID: ${acc.pageId}` : acc.igBusinessAccountId ? `@${acc.igBusinessAccountId}` : 'Connected'),
+          handle: displayHandle,
           accountName: acc.accountName,
           profilePictureUrl: acc.profilePictureUrl,
           pageId: acc.pageId,
@@ -276,11 +282,14 @@ const ConnectAccountsPage: React.FC = () => {
                     <Button
                       onClick={() => handleConnect(platform.id)}
                       className={cn(
-                        "w-full md:w-auto gap-2 px-8 h-12 font-bold shadow-lg",
-                        platform.id === 'IG' ? "bg-gradient-to-r from-rose-500 to-purple-600 border-none hover:opacity-90" : "bg-blue-600 hover:bg-blue-700"
+                        "w-full md:w-auto gap-2 px-10 h-14 font-black uppercase tracking-widest text-[11px] shadow-2xl transition-all active:scale-95 group relative overflow-hidden",
+                        platform.id === 'IG' 
+                          ? "bg-gradient-to-r from-amber-500 via-rose-500 to-purple-600 border-none hover:shadow-rose-500/25" 
+                          : "bg-blue-600 hover:bg-blue-700 shadow-blue-500/20"
                       )}
                     >
-                      <Link2 size={20} />
+                      <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity" />
+                      <Link2 size={18} className="group-hover:rotate-12 transition-transform" />
                       Connect {platform.id === 'FB' ? 'Facebook' : 'Instagram'}
                     </Button>
                   )}

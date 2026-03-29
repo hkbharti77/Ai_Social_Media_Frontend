@@ -32,6 +32,7 @@ const BusinessProfilePage: React.FC = () => {
 
   const [formData, setFormData] = useState<ProfileData>({
     businessName: '',
+    brandSlug: '',
     niche: '',
     targetAudience: '',
     brandTone: '',
@@ -67,36 +68,38 @@ const BusinessProfilePage: React.FC = () => {
   useEffect(() => {
     const fetchProfile = async () => {
       try {
-        const data = await getProfile();
-        if (data) {
+        const resp = await getProfile();
+        if (resp && resp.profile) {
+          const p = resp.profile;
           setFormData(prev => ({
             ...prev,
-            ...data,
-            businessName: data.businessName || '',
-            niche: data.niche || '',
-            targetAudience: data.targetAudience || '',
-            brandTone: data.brandTone || '',
-            postingFrequency: data.postingFrequency || 5,
-            preferredHashtags: data.preferredHashtags || '',
-            imageStyle: data.imageStyle || 'cinematic',
-            peoplePreference: data.peoplePreference || 'PROFESSIONALS',
-            brandColors: data.brandColors || ['#0A1F44', '#FFFFFF'],
-            brandMood: data.brandMood || 'modern, clean, high-tech',
-            designStyle: data.designStyle || 'minimal',
-            visualConstraints: data.visualConstraints || 'no clutter, high contrast, sharp lighting',
-            imageType: data.imageType || 'social_post',
-            compositionStyle: data.compositionStyle || 'centered subject with negative space',
-            cameraAngle: data.cameraAngle || 'eye-level',
-            lightingStyle: data.lightingStyle || 'studio lighting',
-            colorTemperature: data.colorTemperature || 'cool',
-            backgroundStyle: data.backgroundStyle || 'gradient minimal background',
-            subjectFocus: data.subjectFocus || 'product-focused',
-            textOverlay: data.textOverlay || { enabled: true, style: 'bold modern typography', position: 'top-left' },
-            logoPlacement: data.logoPlacement || 'bottom-right',
-            aspectRatio: data.aspectRatio || '1:1',
-            qualityLevel: data.qualityLevel || 'high',
-            creativityLevel: data.creativityLevel || 0.7,
-            negativePrompt: data.negativePrompt || 'blurry, low quality, distorted faces'
+            ...p,
+            businessName: p.businessName || '',
+            brandSlug: p.brandSlug || '',
+            niche: p.niche || '',
+            targetAudience: p.targetAudience || '',
+            brandTone: p.brandTone || '',
+            postingFrequency: p.postingFrequency || 5,
+            preferredHashtags: p.preferredHashtags || '',
+            imageStyle: p.imageStyle || 'cinematic',
+            peoplePreference: p.peoplePreference || 'PROFESSIONALS',
+            brandColors: p.brandColors || ['#0A1F44', '#FFFFFF'],
+            brandMood: p.brandMood || 'modern, clean, high-tech',
+            designStyle: p.designStyle || 'minimal',
+            visualConstraints: p.visualConstraints || 'no clutter, high contrast, sharp lighting',
+            imageType: p.imageType || 'social_post',
+            compositionStyle: p.compositionStyle || 'centered subject with negative space',
+            cameraAngle: p.cameraAngle || 'eye-level',
+            lightingStyle: p.lightingStyle || 'studio lighting',
+            colorTemperature: p.colorTemperature || 'cool',
+            backgroundStyle: p.backgroundStyle || 'gradient minimal background',
+            subjectFocus: p.subjectFocus || 'product-focused',
+            textOverlay: p.textOverlay || { enabled: true, style: 'bold modern typography', position: 'top-left' },
+            logoPlacement: p.logoPlacement || 'bottom-right',
+            aspectRatio: p.aspectRatio || '1:1',
+            qualityLevel: p.qualityLevel || 'high',
+            creativityLevel: p.creativityLevel || 0.7,
+            negativePrompt: p.negativePrompt || 'blurry, low quality, distorted faces'
           }));
         }
       } catch (error) {
@@ -237,14 +240,28 @@ const BusinessProfilePage: React.FC = () => {
                     </div>
                   </div>
                   <div className="space-y-5">
-                    <div className="space-y-2">
-                      <label className="text-sm font-bold text-muted-foreground uppercase tracking-widest px-1">Business Name</label>
-                      <input 
-                        value={formData.businessName}
-                        onChange={(e) => handleChange('businessName', e.target.value)}
-                        placeholder="e.g. Acme Corp"
-                        className="w-full px-5 py-4 bg-secondary/50 border-2 border-border rounded-2xl focus:border-primary focus:outline-none transition-all text-lg font-medium"
-                      />
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                      <div className="space-y-2">
+                        <label className="text-sm font-bold text-muted-foreground uppercase tracking-widest px-1">Business Name</label>
+                        <input 
+                          value={formData.businessName}
+                          onChange={(e) => handleChange('businessName', e.target.value)}
+                          placeholder="e.g. Acme Corp"
+                          className="w-full px-5 py-4 bg-secondary/50 border-2 border-border rounded-2xl focus:border-primary focus:outline-none transition-all text-lg font-medium"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-sm font-bold text-muted-foreground uppercase tracking-widest px-1">Brand URL Slug</label>
+                        <div className="relative">
+                          <span className="absolute left-5 top-1/2 -translate-y-1/2 text-muted-foreground/40 font-mono text-sm group-focus-within:text-primary/40">vaniai.com/m/</span>
+                          <input 
+                            value={formData.brandSlug}
+                            onChange={(e) => handleChange('brandSlug', e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
+                            placeholder="my-brand"
+                            className="w-full px-5 py-4 pl-[110px] bg-secondary/50 border-2 border-border rounded-2xl focus:border-primary focus:outline-none transition-all text-lg font-medium font-mono"
+                          />
+                        </div>
+                      </div>
                     </div>
                     <div className="space-y-2">
                       <label className="text-sm font-bold text-muted-foreground uppercase tracking-widest px-1">Niche / Value Proposition</label>

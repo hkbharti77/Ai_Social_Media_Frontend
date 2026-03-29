@@ -19,6 +19,8 @@ import { useAuth } from '../../context/AuthContext';
 const navItems = [
   { icon: LayoutDashboard, label: 'Dashboard', href: '/dashboard' },
   { icon: PlusCircle, label: 'Generate', href: '/generate' },
+  { icon: Sparkles, label: 'AI Butler', href: '/reviews' },
+  { icon: LinkIcon, label: 'Microsite', href: '/microsite' },
   { icon: LinkIcon, label: 'Connect', href: '/connect' },
   { icon: ImageIcon, label: 'AI Media', href: '/media' },
   { icon: UserCircle, label: 'Profile', href: '/profile/setup' },
@@ -32,7 +34,7 @@ const Sidebar: React.FC = () => {
   const toggleSidebar = () => setIsOpen(!isOpen);
 
   const sidebarContent = (
-    <div className="flex flex-col h-full bg-card/80 backdrop-blur-3xl border-r border-white/5 shadow-2xl">
+    <div className="flex flex-col h-full bg-card/80 backdrop-blur-3xl border-r border-white/5 shadow-2xl overflow-y-auto scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
       <div className="p-8">
         <h1 className="text-2xl font-black text-primary flex items-center gap-4 tracking-tighter">
           <div className="w-12 h-12 bg-gradient-to-br from-primary to-blue-600 rounded-2xl flex items-center justify-center text-white font-black shadow-lg shadow-primary/20 shrink-0">

@@ -17,14 +17,43 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 import { useAuth } from '../../context/AuthContext';
+import { getProfile, type ProfileResponse } from '../../api/profile';
+import { getPaymentHistory, getUsageHistory, downloadReceiptPdf, type PaymentOrder, type CreditUsage } from '../../api/usage';
+import { useNavigate } from 'react-router-dom';
+import { History, FileText, Download, Zap } from 'lucide-react';
 
 const SettingsPage: React.FC = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [activeSection, setActiveSection] = useState<string | null>(null);
+  const [subscription, setSubscription] = useState<ProfileResponse['subscription'] | null>(null);
+  const [payments, setPayments] = useState<PaymentOrder[]>([]);
+  const [usage, setUsage] = useState<CreditUsage[]>([]);
+
+  React.useEffect(() => {
+    fetchData();
+  }, []);
+
+  const fetchData = async () => {
+    try {
+      const data = await getProfile();
+      setSubscription(data.subscription);
+      
+      const [payData, usageData] = await Promise.all([
+        getPaymentHistory(),
+        getUsageHistory()
+      ]);
+      setPayments(payData);
+      setUsage(usageData);
+    } catch (e) {
+      console.error('Failed to sync settings', e);
+    }
+  };
 
   const sections = [
     { id: 'account', title: 'Account Settings', desc: 'Secure and personalize your profile.', icon: User, color: 'text-blue-400' },
     { id: 'billing', title: 'Subscription & Billing', desc: 'Manage your enterprise plan and invoices.', icon: CreditCard, color: 'text-emerald-400' },
+    { id: 'usage', title: 'Usage Activity', desc: 'Real-time ledger of your AI credit consumption.', icon: History, color: 'text-orange-400' },
     { id: 'notifications', title: 'Alert Preferences', desc: 'Customize your real-time notification lab.', icon: Bell, color: 'text-amber-400' },
     { id: 'api', title: 'API & Integrations', desc: 'Connect to external neural networks.', icon: ShieldCheck, color: 'text-purple-400' },
   ];
@@ -79,31 +108,93 @@ const SettingsPage: React.FC = () => {
               </div>
               <div className="space-y-2 relative">
                 <p className="text-[10px] font-black text-primary uppercase tracking-[0.3em]">Active Tier</p>
-                <h3 className="text-4xl font-black tracking-tighter">Pro Enterprise</h3>
-                <p className="text-muted-foreground text-lg font-medium opacity-70 italic">Synchronized until Oct 24, 2026</p>
+                <h3 className="text-4xl font-black tracking-tighter capitalize">{subscription?.tier.toLowerCase().replace('_', ' ') || 'Free'}</h3>
+                <p className="text-muted-foreground text-lg font-medium opacity-70 italic">
+                  {subscription?.monthlyCredits} Credits Remaining
+                </p>
               </div>
-              <Button className="h-16 px-12 rounded-2xl text-xl font-black shadow-2xl shadow-primary/20 relative">Change Plan</Button>
+              <Button 
+                onClick={() => navigate('/pricing')}
+                className="h-16 px-12 rounded-2xl text-xl font-black shadow-2xl shadow-primary/20 relative"
+              >
+                Change Plan
+              </Button>
             </div>
             <div className="space-y-6">
-              <h4 className="text-sm font-black uppercase tracking-[0.2em] text-muted-foreground/60">Historical Documents</h4>
+              <h4 className="text-sm font-black uppercase tracking-[0.2em] text-muted-foreground/60">Historical Invoices</h4>
               <div className="grid gap-4">
-                {[1, 2].map(i => (
-                  <div key={i} className="flex justify-between items-center p-6 bg-secondary/30 rounded-[1.5rem] border-2 border-white/5 hover:border-white/10 transition-all group">
+                {payments.length > 0 ? payments.map(pay => (
+                  <div key={pay.id} className="flex flex-col md:flex-row justify-between items-start md:items-center p-6 bg-secondary/30 rounded-[1.5rem] border-2 border-white/5 hover:border-white/10 transition-all group gap-4">
                     <div className="flex items-center gap-4">
                       <div className="p-3 bg-white/5 rounded-xl text-muted-foreground group-hover:text-primary transition-colors">
-                        <CreditCard size={20} />
+                        <FileText size={20} />
                       </div>
                       <div>
-                        <p className="font-bold text-lg">Invoice #{1024 - i}</p>
-                        <p className="text-xs text-muted-foreground uppercase font-black tracking-widest">Sept {24-i}, 2026</p>
+                        <p className="font-bold text-lg">{pay.targetTier} Plan Renewal</p>
+                        <p className="text-[10px] text-muted-foreground uppercase font-black tracking-widest">{new Date(pay.completedAt || pay.createdAt).toLocaleDateString()} • {pay.razorpayPaymentId}</p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-6">
-                      <span className="text-xl font-black tracking-tight">$29.00</span>
-                      <Button variant="ghost" className="h-10 rounded-lg text-primary hover:bg-primary/5 font-bold">Download Asset</Button>
+                    <div className="flex items-center justify-between w-full md:w-auto gap-8">
+                      <span className="text-xl font-black tracking-tight text-emerald-400">₹{pay.amount / 100}</span>
+                      <Button 
+                        variant="ghost" 
+                        onClick={() => downloadReceiptPdf(pay.razorpayOrderId)}
+                        className="h-10 rounded-lg text-primary hover:bg-primary/5 font-bold flex items-center gap-2"
+                      >
+                        <Download size={16} /> Receipt
+                      </Button>
                     </div>
                   </div>
-                ))}
+                )) : (
+                  <div className="p-12 text-center bg-white/5 rounded-[1.5rem] border-2 border-dashed border-white/5 text-muted-foreground">
+                    No payment history discovered in this identity sector.
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        );
+      case 'usage':
+        return (
+          <div className="space-y-10">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="bg-orange-500/10 border-2 border-orange-500/20 p-6 rounded-3xl">
+                <p className="text-[10px] font-black text-orange-400 uppercase tracking-widest mb-1">Total Consumed</p>
+                <h4 className="text-3xl font-black tracking-tighter">{Math.abs(usage.reduce((acc, curr) => acc + curr.amount, 0))} Credits</h4>
+              </div>
+              <div className="bg-blue-500/10 border-2 border-blue-500/20 p-6 rounded-3xl">
+                <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest mb-1">Average Daily</p>
+                <h4 className="text-3xl font-black tracking-tighter">1.2 Units</h4>
+              </div>
+              <div className="bg-purple-500/10 border-2 border-purple-500/20 p-6 rounded-3xl">
+                <p className="text-[10px] font-black text-purple-400 uppercase tracking-widest mb-1">Cortex Load</p>
+                <h4 className="text-3xl font-black tracking-tighter">Optimal</h4>
+              </div>
+            </div>
+
+            <div className="space-y-6">
+              <h4 className="text-sm font-black uppercase tracking-[0.2em] text-muted-foreground/60">Usage Log</h4>
+              <div className="grid gap-4">
+                {usage.length > 0 ? usage.map(u => (
+                  <div key={u.id} className="flex justify-between items-center p-6 bg-secondary/30 rounded-[1.5rem] border-2 border-white/5 group">
+                    <div className="flex items-center gap-4">
+                      <div className="p-3 bg-orange-500/10 rounded-xl text-orange-400">
+                        <Zap size={20} />
+                      </div>
+                      <div>
+                        <p className="font-bold text-lg">{u.purpose}</p>
+                        <p className="text-[10px] text-muted-foreground uppercase font-black tracking-widest">{new Date(u.createdAt).toLocaleString()}</p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-xl font-black tracking-tight text-orange-400">{u.amount} Units</span>
+                    </div>
+                  </div>
+                )) : (
+                  <div className="p-12 text-center bg-white/5 rounded-[1.5rem] border-2 border-dashed border-white/5 text-muted-foreground">
+                    No neural activity detected in your consumption history.
+                  </div>
+                )}
               </div>
             </div>
           </div>

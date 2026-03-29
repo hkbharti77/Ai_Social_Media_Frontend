@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
 import PageWrapper from '../../components/layout/PageWrapper';
 import { Button } from '../../components/ui/Button';
-import { 
-  Sparkles, 
-  Link as LinkIcon, 
-  Share2, 
-  Wand2, 
-  Save, 
+import {
+  Sparkles,
+  Link as LinkIcon,
+  Share2,
+  Wand2,
+  Save,
   Calendar as CalendarIcon,
   Trash2,
   RefreshCcw,
@@ -21,6 +21,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { generatePostsApi } from '../../api/ai';
 import type { GeneratedPost } from '../../api/ai';
 import { createPostApi, PostStatus } from '../../api/posts';
+import { UpgradeModal } from '../../components/layout/UpgradeModal';
+import { getProfile, type ProfileResponse } from '../../api/profile';
 
 const GeneratePage: React.FC = () => {
   const [batchCount, setBatchCount] = useState(3);
@@ -30,6 +32,22 @@ const GeneratePage: React.FC = () => {
   const [generatedPosts, setGeneratedPosts] = useState<GeneratedPost[]>([]);
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [command, setCommand] = useState('');
+  const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
+  const [upgradeMessage, setUpgradeMessage] = useState('');
+  const [subscription, setSubscription] = useState<ProfileResponse['subscription'] | null>(null);
+
+  React.useEffect(() => {
+    fetchSubscription();
+  }, []);
+
+  const fetchSubscription = async () => {
+    try {
+      const data = await getProfile();
+      setSubscription(data.subscription);
+    } catch (e) {
+      console.error('Failed to fetch subscription', e);
+    }
+  };
 
   const handleGenerate = async () => {
     if (!command.trim()) {
@@ -39,20 +57,26 @@ const GeneratePage: React.FC = () => {
 
     setIsGenerating(true);
     setGeneratedPosts([]);
-    toast.info("AI is crafting your posts...", { 
+    toast.info("AI is crafting your posts...", {
       icon: <RefreshCcw size={16} className="animate-spin text-primary" />,
     });
-    
+
     try {
-      const response = await generatePostsApi({ 
-        command, 
-        count: batchCount 
+      const response = await generatePostsApi({
+        command,
+        count: batchCount
       });
       setGeneratedPosts(response.posts);
       toast.success(`Successfully generated ${response.posts.length} posts!`);
-    } catch (error) {
+      fetchSubscription(); // Refresh credits
+    } catch (error: any) {
       console.error('Generation failed', error);
-      toast.error("Failed to generate posts. Ensure your Business Profile is set up.");
+      if (error.response?.status === 402) {
+        setUpgradeMessage(error.response.data?.message || "You've reached your credit limit!");
+        setIsUpgradeModalOpen(true);
+      } else {
+        toast.error("Failed to generate posts. Ensure your Business Profile is set up.");
+      }
     } finally {
       setIsGenerating(false);
     }
@@ -84,7 +108,7 @@ const GeneratePage: React.FC = () => {
     try {
       const tomorrow = new Date();
       tomorrow.setDate(tomorrow.getDate() + 1);
-      
+
       await createPostApi({
         caption: post.caption,
         hashtags: post.hashtags.join(' '),
@@ -93,7 +117,7 @@ const GeneratePage: React.FC = () => {
         status: PostStatus.SCHEDULED,
         scheduledAt: tomorrow.toISOString().split('.')[0]
       });
-      
+
       toast.success("Post scheduled successfully!", {
         description: "Scheduled for tomorrow",
         icon: <CalendarIcon size={16} />
@@ -116,8 +140,8 @@ const GeneratePage: React.FC = () => {
       <div className="space-y-10 pb-20">
         <header className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
           <div className="space-y-2">
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-black tracking-tighter text-foreground">AI Engine</h1>
-            <p className="text-muted-foreground text-base md:text-lg font-medium opacity-80 max-w-xl">Generate platform-ready content in seconds.</p>
+            <h1 className="text-4xl md:text-5xl lg:text-6xl font-black tracking-tighter text-foreground uppercase italic px-1">AI Engine</h1>
+            <p className="text-muted-foreground text-base md:text-lg font-medium opacity-80 max-w-xl px-1">Generate platform-ready content in seconds.</p>
           </div>
           <div className="flex bg-secondary/30 backdrop-blur-md p-1.5 rounded-2xl border border-border/50 self-end md:self-auto">
             <button 
@@ -142,7 +166,7 @@ const GeneratePage: React.FC = () => {
         </header>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
-          {/* Controls Panel - Glassmorphism */}
+          {/* Controls Panel - Premium Glassmorphism */}
           <div className="lg:col-span-4 space-y-6">
             <div className="bg-card/40 backdrop-blur-xl border-2 border-white/5 p-10 rounded-[2.5rem] space-y-10 sticky top-8 shadow-2xl relative overflow-hidden group">
               <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity">
@@ -182,10 +206,7 @@ const GeneratePage: React.FC = () => {
                 </div>
                 <div className="px-1">
                   <input 
-                    type="range" 
-                    min="1" 
-                    max="10" 
-                    value={batchCount} 
+                    type="range" min="1" max="10" value={batchCount} 
                     onChange={(e) => setBatchCount(parseInt(e.target.value))}
                     className="w-full h-2.5 bg-secondary/50 rounded-full appearance-none cursor-pointer accent-primary shadow-inner"
                   />
@@ -206,28 +227,57 @@ const GeneratePage: React.FC = () => {
                 />
               </div>
 
-              <Button 
-                onClick={handleGenerate} 
-                disabled={isGenerating}
-                className="w-full py-10 text-2xl font-black gap-4 shadow-[0_20px_40px_rgba(var(--primary),0.2)] rounded-[1.5rem] active:scale-95 transition-all group overflow-hidden relative whitespace-nowrap"
-              >
-                <div className="absolute inset-0 bg-gradient-to-r from-primary to-blue-600 opacity-90 group-hover:opacity-100 transition-opacity" />
-                <div className="relative flex items-center justify-center gap-3 w-full">
-                  {isGenerating ? <Loader2 className="animate-spin shrink-0" size={28} /> : <Sparkles className="shrink-0" size={28} />}
-                  <span className="truncate">{isGenerating ? 'AI IS COOKING...' : 'Generate Magic'}</span>
-                </div>
-              </Button>
+              <div className="space-y-4">
+                {subscription && (
+                  <div className={cn(
+                    "flex items-center justify-between p-4 rounded-2xl border-2 transition-all",
+                    subscription.monthlyCredits < 5 ? "bg-rose-500/10 border-rose-500/20" : "bg-primary/5 border-primary/10"
+                  )}>
+                    <div className="space-y-0.5">
+                      <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Credits Remaining</p>
+                      <p className={cn(
+                        "text-xl font-black tracking-tighter",
+                        subscription.monthlyCredits < 5 ? "text-rose-500" : "text-primary"
+                      )}>
+                        {subscription.monthlyCredits} <span className="text-[10px] opacity-60 uppercase tracking-widest ml-1">{subscription.tier}</span>
+                      </p>
+                    </div>
+                    {subscription.monthlyCredits < 5 && (
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={() => setIsUpgradeModalOpen(true)}
+                        className="h-8 rounded-lg text-[9px] font-black uppercase tracking-widest border-rose-500/20 hover:bg-rose-500/10 text-rose-500 shadow-lg shadow-rose-500/10"
+                      >
+                        Top Up
+                      </Button>
+                    )}
+                  </div>
+                )}
+
+                <Button 
+                  onClick={handleGenerate} 
+                  disabled={isGenerating}
+                  className="w-full py-10 text-2xl font-black gap-4 shadow-[0_20px_40px_rgba(var(--primary),0.2)] rounded-[1.5rem] active:scale-95 transition-all group overflow-hidden relative whitespace-nowrap"
+                >
+                  <div className="absolute inset-0 bg-gradient-to-r from-primary to-blue-600 opacity-90 group-hover:opacity-100 transition-opacity" />
+                  <div className="relative flex items-center justify-center gap-3 w-full">
+                    {isGenerating ? <Loader2 className="animate-spin shrink-0" size={28} /> : <Sparkles className="shrink-0" size={28} />}
+                    <span className="truncate tracking-tighter italic uppercase">{isGenerating ? 'AI IS COOKING...' : 'Generate Magic'}</span>
+                  </div>
+                </Button>
+              </div>
             </div>
           </div>
 
-          {/* Results Grid - Modern Layout */}
+          {/* Results Grid - ABC Card Style */}
           <div className="lg:col-span-8 space-y-8">
             <div className="flex items-center gap-6 px-4">
               <div className="p-4 bg-primary/10 rounded-2xl text-primary shadow-inner">
                 <Wand2 size={28} />
               </div>
               <div className="h-px bg-gradient-to-r from-border to-transparent flex-1" />
-              <h3 className="font-black text-xl uppercase tracking-[0.3em] text-muted-foreground/80 shrink-0">Studio Output</h3>
+              <h3 className="font-black text-xl uppercase tracking-[0.3em] text-muted-foreground/80 shrink-0 italic">Studio Output</h3>
             </div>
 
             <AnimatePresence mode="popLayout">
@@ -265,7 +315,7 @@ const GeneratePage: React.FC = () => {
                       exit={{ opacity: 0, scale: 0.95 }}
                       transition={{ type: 'spring', damping: 20, stiffness: 100 }}
                       className={cn(
-                        "group bg-card/60 backdrop-blur-lg border-2 border-white/5 rounded-[3rem] overflow-hidden transition-all duration-500 hover:border-primary/50 hover:shadow-[0_40px_80px_rgba(0,0,0,0.5)] flex h-full shadow-2xl relative max-h-[850px]",
+                        "group bg-card/60 backdrop-blur-lg border-2 border-white/5 rounded-[3rem] overflow-hidden transition-all duration-500 hover:border-primary/50 hover:shadow-[0_40px_80px_rgba(0,0,0,0.5)] flex flex-col h-full shadow-2xl relative max-h-[850px]",
                         viewMode === 'grid' ? "flex-col" : "flex-row h-72"
                       )}
                     >
@@ -288,16 +338,14 @@ const GeneratePage: React.FC = () => {
                         )}
                         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-all duration-500 flex items-center justify-center gap-4 backdrop-blur-[2px]">
                           <Button 
-                            size="icon" 
-                            variant="secondary" 
+                            size="icon" variant="secondary" 
                             className="rounded-2xl shadow-2xl h-14 w-14 hover:scale-110 transition-all active:scale-95 bg-white/10 border-white/20 backdrop-blur-md"
                             onClick={() => toast.success("Refinement requested")}
                           >
                             <RefreshCcw size={24} />
                           </Button>
                           <Button 
-                            size="icon" 
-                            variant="secondary" 
+                            size="icon" variant="secondary" 
                             className="rounded-2xl shadow-2xl h-14 w-14 text-rose-500 hover:bg-rose-500/20 hover:scale-110 transition-all active:scale-95 bg-white/10 border-white/20 backdrop-blur-md"
                             onClick={() => handleDelete(index)}
                           >
@@ -318,7 +366,7 @@ const GeneratePage: React.FC = () => {
                       )}>
                         <div className="space-y-4 overflow-y-auto pr-2 max-h-[300px] custom-scrollbar">
                           <p className={cn(
-                            "text-xl font-bold leading-relaxed tracking-tight text-foreground/90 font-sans",
+                            "text-xl font-bold leading-relaxed tracking-tight text-foreground/90 font-sans italic",
                             viewMode === 'list' && "line-clamp-2"
                           )}>
                             {post.caption.trim()} <span className="text-primary truncate">{post.hashtags.join(' ')}</span>
@@ -326,8 +374,7 @@ const GeneratePage: React.FC = () => {
                         </div>
                         <div className="flex items-center gap-3">
                           <Button 
-                            variant="outline" 
-                            size="lg" 
+                            variant="outline" size="lg" 
                             disabled={processingId === `draft-${index}`}
                             onClick={() => handleDraft(post, index)}
                             className="flex-1 gap-3 h-14 rounded-[1.25rem] font-black uppercase tracking-widest text-[10px] border-2 border-white/10 hover:bg-white/5 transition-all"
@@ -360,7 +407,7 @@ const GeneratePage: React.FC = () => {
                       <Sparkles size={48} className="animate-pulse" />
                     </div>
                     <div className="max-w-md mx-auto space-y-3 px-6">
-                      <h4 className="font-black text-4xl md:text-5xl tracking-tighter text-foreground">AI Studio</h4>
+                      <h4 className="font-black text-4xl md:text-5xl tracking-tighter text-foreground uppercase italic px-1">AI Studio</h4>
                       <p className="text-muted-foreground text-base md:text-lg font-medium opacity-60 leading-relaxed max-w-sm mx-auto">Describe your vision and watch AI manifest your brand identity.</p>
                     </div>
                     <Button size="lg" className="px-12 h-16 rounded-[1.5rem] text-xl font-black group shadow-[0_20px_50px_rgba(var(--primary),0.3)] transition-all active:scale-95" onClick={handleGenerate}>
@@ -374,6 +421,11 @@ const GeneratePage: React.FC = () => {
           </div>
         </div>
       </div>
+      <UpgradeModal 
+        isOpen={isUpgradeModalOpen} 
+        onClose={() => setIsUpgradeModalOpen(false)} 
+        message={upgradeMessage}
+      />
     </PageWrapper>
   );
 };

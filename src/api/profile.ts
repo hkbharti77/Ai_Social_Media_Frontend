@@ -38,8 +38,20 @@ export interface ProfileData {
   user?: any;
 }
 
-export const getProfile = async (): Promise<ProfileData> => {
-  const response = await axios.get<ProfileData>('/profile');
+export interface ProfileResponse {
+  profile: ProfileData;
+  subscription: {
+    tier: string;
+    tierOrdinal: number;
+    monthlyCredits: number;
+    dailyCreditsUsed: number;
+    lastGenerationAt: string;
+    expiresAt?: string;
+  };
+}
+
+export const getProfile = async (): Promise<ProfileResponse> => {
+  const response = await axios.get<ProfileResponse>('/profile');
   return response.data;
 };
 

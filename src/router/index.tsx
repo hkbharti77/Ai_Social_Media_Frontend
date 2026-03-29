@@ -8,6 +8,7 @@ import ConnectAccountsPage from '../pages/connect/ConnectAccountsPage';
 import BusinessProfilePage from '../pages/profile/BusinessProfilePage';
 import SettingsPage from '../pages/settings/SettingsPage';
 import MediaPage from '../pages/media/MediaPage';
+import PricingPage from '../pages/settings/PricingPage';
 
 export const router = createBrowserRouter([
   {
@@ -48,6 +49,10 @@ export const router = createBrowserRouter([
       {
         path: '/media',
         element: <MediaPage />,
+      },
+      {
+        path: '/pricing',
+        element: <PricingPage />,
       },
     ],
   },

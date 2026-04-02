@@ -11,6 +11,7 @@ import MediaPage from '../pages/media/MediaPage';
 import PricingPage from '../pages/settings/PricingPage';
 import ReviewButlerPage from '../pages/reviews/ReviewButlerPage';
 import MicrositePage from '../pages/settings/MicrositePage';
+import EvergreenPage from '../pages/evergreen/EvergreenPage';
 
 export const router = createBrowserRouter([
   {
@@ -63,6 +64,10 @@ export const router = createBrowserRouter([
       {
         path: '/microsite',
         element: <MicrositePage />,
+      },
+      {
+        path: '/evergreen',
+        element: <EvergreenPage />,
       },
     ],
   },

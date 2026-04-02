@@ -10,7 +10,8 @@ import {
   Menu,
   X,
   Sparkles,
-  Image as ImageIcon
+  Image as ImageIcon,
+  Leaf
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '../../lib/utils';
@@ -20,6 +21,7 @@ const navItems = [
   { icon: LayoutDashboard, label: 'Dashboard', href: '/dashboard' },
   { icon: PlusCircle, label: 'Generate', href: '/generate' },
   { icon: Sparkles, label: 'AI Butler', href: '/reviews' },
+  { icon: Leaf, label: 'Evergreen', href: '/evergreen' },
   { icon: LinkIcon, label: 'Microsite', href: '/microsite' },
   { icon: LinkIcon, label: 'Connect', href: '/connect' },
   { icon: ImageIcon, label: 'AI Media', href: '/media' },
@@ -35,13 +37,14 @@ const Sidebar: React.FC = () => {
 
   const sidebarContent = (
     <div className="flex flex-col h-full bg-card/80 backdrop-blur-3xl border-r border-white/5 shadow-2xl overflow-y-auto scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
-      <div className="p-8">
+      <div className="p-8 space-y-8">
         <h1 className="text-2xl font-black text-primary flex items-center gap-4 tracking-tighter">
           <div className="w-12 h-12 bg-gradient-to-br from-primary to-blue-600 rounded-2xl flex items-center justify-center text-white font-black shadow-lg shadow-primary/20 shrink-0">
             <Sparkles size={24} />
           </div>
           <span className="mt-1">VaniAI</span>
         </h1>
+
       </div>
       
       <nav className="flex-1 px-4 space-y-3">

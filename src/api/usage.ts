@@ -19,6 +19,23 @@ export interface CreditUsage {
   createdAt: string;
 }
 
+export interface AiUsageLog {
+  id: number;
+  modelId: string;
+  actionType: string;
+  promptTokens: number;
+  completionTokens: number;
+  totalTokens: number;
+  createdAt: string;
+}
+
+export interface AiUsageSummary {
+  modelId: string;
+  promptTokens: number;
+  completionTokens: number;
+  totalTokens: number;
+}
+
 export const getPaymentHistory = async (): Promise<PaymentOrder[]> => {
   const response = await axios.get<PaymentOrder[]>('/payments/history');
   return response.data;
@@ -40,5 +57,15 @@ export const downloadReceiptPdf = async (orderId: string) => {
 
 export const getUsageHistory = async (): Promise<CreditUsage[]> => {
   const response = await axios.get<CreditUsage[]>('/usage/history');
+  return response.data;
+};
+
+export const getAiUsageLogs = async (): Promise<AiUsageLog[]> => {
+  const response = await axios.get<AiUsageLog[]>('/usage/ai-logs');
+  return response.data;
+};
+
+export const getAiUsageSummary = async (): Promise<AiUsageSummary[]> => {
+  const response = await axios.get<AiUsageSummary[]>('/usage/ai-summary');
   return response.data;
 };

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   X, Save, Link as LinkIcon, Share2, Loader2, Image as ImageIcon,
-  Sparkles, Hash, Calendar, CheckCircle2, Download, Plus
+  Sparkles, Hash, Calendar, CheckCircle2, Download, Plus, Layers
 } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { cn } from '../../lib/utils';
@@ -21,9 +21,11 @@ const PostEditorModal: React.FC<PostEditorModalProps> = ({ isOpen, onClose, onSa
   const [caption, setCaption] = useState('');
   const [hashtags, setHashtags] = useState('');
   const [imageUrl, setImageUrl] = useState('');
-  const [platform, setPlatform] = useState<'FACEBOOK' | 'INSTAGRAM'>('INSTAGRAM');
+  const [platform, setPlatform] = useState<'FACEBOOK' | 'INSTAGRAM' | 'LINKEDIN'>('INSTAGRAM');
   const [status, setStatus] = useState<string>(PostStatus.DRAFT);
   const [scheduledAt, setScheduledAt] = useState('');
+  const [isCarousel, setIsCarousel] = useState(false);
+  const [carouselContent, setCarouselContent] = useState<string | undefined>(undefined);
   const [isSaving, setIsSaving] = useState(false);
 
   // Compute a default tomorrow datetime for scheduling
@@ -39,9 +41,11 @@ const PostEditorModal: React.FC<PostEditorModalProps> = ({ isOpen, onClose, onSa
       setCaption(initialData.caption || '');
       setHashtags(initialData.hashtags || '');
       setImageUrl(initialData.imageUrl || '');
-      setPlatform((initialData.platform?.toUpperCase() === 'FACEBOOK' ? 'FACEBOOK' : 'INSTAGRAM'));
+      setPlatform((initialData.platform?.toUpperCase() === 'FACEBOOK' ? 'FACEBOOK' : initialData.platform?.toUpperCase() === 'LINKEDIN' ? 'LINKEDIN' : 'INSTAGRAM'));
       setStatus(initialData.status || PostStatus.DRAFT);
       setScheduledAt(initialData.scheduledAt ? initialData.scheduledAt.slice(0, 16) : getTomorrow());
+      setIsCarousel(!!initialData.isCarousel);
+      setCarouselContent(initialData.carouselContent);
     } else {
       setCaption('');
       setHashtags('');
@@ -49,6 +53,8 @@ const PostEditorModal: React.FC<PostEditorModalProps> = ({ isOpen, onClose, onSa
       setPlatform('INSTAGRAM');
       setStatus(PostStatus.DRAFT);
       setScheduledAt(getTomorrow());
+      setIsCarousel(false);
+      setCarouselContent(undefined);
     }
   }, [mode, initialData, isOpen]);
 
@@ -66,6 +72,8 @@ const PostEditorModal: React.FC<PostEditorModalProps> = ({ isOpen, onClose, onSa
         platform,
         status: status as typeof PostStatus[keyof typeof PostStatus],
         scheduledAt: status === PostStatus.SCHEDULED ? scheduledAt : undefined,
+        isCarousel,
+        carouselContent
       };
 
       let savedPost: Post;
@@ -174,22 +182,25 @@ const PostEditorModal: React.FC<PostEditorModalProps> = ({ isOpen, onClose, onSa
                     {/* Platform */}
                     <div className="space-y-3">
                       <label className="text-xs font-black uppercase tracking-[0.2em] text-muted-foreground px-1">Platform Target</label>
-                      <div className="flex bg-secondary/20 p-2 rounded-2xl border border-white/5">
-                        {(['FACEBOOK', 'INSTAGRAM'] as const).map((p) => (
+                      <div className="flex bg-secondary/20 p-1.5 rounded-2xl border border-white/5 gap-1">
+                        {(['FACEBOOK', 'INSTAGRAM', 'LINKEDIN'] as const).map((p) => (
                           <button
                             key={p}
                             onClick={() => setPlatform(p)}
                             className={cn(
-                              'flex-1 flex items-center justify-center gap-2 py-4 rounded-xl transition-all duration-500 text-[10px] font-black uppercase tracking-widest',
+                              'relative flex-1 flex items-center justify-center gap-1.5 py-3 rounded-xl transition-all duration-300 text-[9px] md:text-[10px] font-black uppercase overflow-hidden',
                               platform === p
-                                ? (p === 'INSTAGRAM' 
-                                    ? 'bg-gradient-to-tr from-amber-500 via-rose-500 to-purple-600 text-white shadow-rose-500/20 shadow-2xl scale-105' 
-                                    : 'bg-blue-600 text-white shadow-blue-500/20 shadow-2xl scale-105')
-                                : 'text-muted-foreground hover:text-foreground hover:bg-white/5'
+                                ? cn(
+                                    'text-white shadow-xl scale-[1.02] z-10',
+                                    p === 'INSTAGRAM' && 'bg-gradient-to-tr from-amber-500 via-rose-500 to-purple-600 shadow-rose-500/20',
+                                    p === 'FACEBOOK' && 'bg-blue-600 shadow-blue-500/20',
+                                    p === 'LINKEDIN' && 'bg-[#0077b5] shadow-blue-400/20'
+                                  )
+                                : 'text-muted-foreground hover:text-foreground hover:bg-white/5 z-0'
                             )}
                           >
-                            {p === 'FACEBOOK' ? <LinkIcon size={14} /> : <Share2 size={14} />}
-                            {p === 'FACEBOOK' ? 'Facebook' : 'Instagram'}
+                            {p === 'FACEBOOK' ? <LinkIcon size={12} className="shrink-0" /> : p === 'INSTAGRAM' ? <Share2 size={12} className="shrink-0" /> : <div className="w-3 h-3 flex items-center justify-center font-bold text-[8px] bg-white text-[#0077b5] rounded-sm shrink-0">in</div>}
+                            <span className="truncate">{p === 'FACEBOOK' ? 'Facebook' : p === 'INSTAGRAM' ? 'Instagram' : 'LinkedIn'}</span>
                           </button>
                         ))}
                       </div>
@@ -244,8 +255,8 @@ const PostEditorModal: React.FC<PostEditorModalProps> = ({ isOpen, onClose, onSa
                       Studio Preview
                     </label>
                     <div className="flex items-center gap-2 text-[10px] font-black text-primary uppercase tracking-widest">
-                      {platform === 'INSTAGRAM' ? <Share2 size={12} /> : <LinkIcon size={12} />}
-                      Live on {platform === 'FACEBOOK' ? 'Facebook' : 'Instagram'}
+                      {platform === 'INSTAGRAM' ? <Share2 size={12} /> : platform === 'FACEBOOK' ? <LinkIcon size={12} /> : <div className="w-3 h-3 flex items-center justify-center font-bold text-[8px] bg-primary text-white rounded-[2px]">in</div>}
+                      Live on {platform === 'FACEBOOK' ? 'Facebook' : platform === 'INSTAGRAM' ? 'Instagram' : 'LinkedIn'}
                     </div>
                   </div>
                   <div className={cn(
@@ -263,6 +274,18 @@ const PostEditorModal: React.FC<PostEditorModalProps> = ({ isOpen, onClose, onSa
                       <div className="w-full h-full flex flex-col items-center justify-center gap-4 text-muted-foreground/30">
                         <ImageIcon size={48} />
                         <p className="text-xs font-bold uppercase tracking-widest opacity-60">Paste image URL above</p>
+                      </div>
+                    )}
+
+                    {/* Carousel Layer Indicator */}
+                    {isCarousel && (
+                      <div className="absolute top-6 left-6 z-20">
+                        <div className="bg-black/60 backdrop-blur-md px-4 py-2 rounded-xl border border-white/10 shadow-2xl flex items-center gap-2.5">
+                          <Layers size={14} className="text-primary animate-pulse" />
+                          <span className="text-[10px] font-black uppercase tracking-[0.15em] text-white">
+                            Carousel Post
+                          </span>
+                        </div>
                       </div>
                     )}
                     {imageUrl && (

@@ -22,7 +22,7 @@ import {
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
-import { getProfile, updateProfile, type ProfileData } from '../../api/profile';
+import { getProfile, updateProfile, getSuggestedTimes, type ProfileData } from '../../api/profile';
 
 const BusinessProfilePage: React.FC = () => {
   const [step, setStep] = useState(1);
@@ -60,10 +60,15 @@ const BusinessProfilePage: React.FC = () => {
     aspectRatio: '1:1',
     qualityLevel: 'high',
     creativityLevel: 0.7,
-    negativePrompt: 'blurry, low quality, distorted faces'
+    negativePrompt: 'blurry, low quality, distorted faces',
+    morningDraftTime: '06:00',
+    eveningDraftTime: '15:00',
+    morningPublishTime: '09:00',
+    eveningPublishTime: '20:00',
+    useAiBestTime: false
   });
   
-  const totalSteps = 5;
+  const totalSteps = 6;
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -99,7 +104,12 @@ const BusinessProfilePage: React.FC = () => {
             aspectRatio: p.aspectRatio || '1:1',
             qualityLevel: p.qualityLevel || 'high',
             creativityLevel: p.creativityLevel || 0.7,
-            negativePrompt: p.negativePrompt || 'blurry, low quality, distorted faces'
+            negativePrompt: p.negativePrompt || 'blurry, low quality, distorted faces',
+            morningDraftTime: p.morningDraftTime || '06:00',
+            eveningDraftTime: p.eveningDraftTime || '15:00',
+            morningPublishTime: p.morningPublishTime || '09:00',
+            eveningPublishTime: p.eveningPublishTime || '20:00',
+            useAiBestTime: p.useAiBestTime || false
           }));
         }
       } catch (error) {
@@ -190,7 +200,7 @@ const BusinessProfilePage: React.FC = () => {
 
         {/* Step Indicator */}
         <div className="flex items-center justify-center gap-4 mb-12">
-          {[1, 2, 3, 4, 5].map((s) => (
+          {[1, 2, 3, 4, 5, 6].map((s) => (
             <div key={s} className="flex items-center">
               <div className={cn(
                 "w-10 h-10 rounded-full flex items-center justify-center font-black transition-all duration-500 text-xs",
@@ -621,6 +631,130 @@ const BusinessProfilePage: React.FC = () => {
                       placeholder="e.g. blurry, low quality, distorted faces"
                       className="w-full h-24 px-5 py-4 bg-secondary/50 border-2 border-border rounded-2xl focus:border-primary focus:outline-none transition-all resize-none text-lg"
                     />
+                  </div>
+                </div>
+              )}
+
+              {step === 6 && (
+                <div className="space-y-6">
+                  <div className="flex items-center gap-4 mb-2">
+                    <div className="p-3 bg-primary/10 rounded-2xl text-primary shadow-inner">
+                      <Zap size={32} />
+                    </div>
+                    <div className="space-y-1">
+                      <h3 className="text-3xl font-black">Automation & Scheduling</h3>
+                      <p className="text-muted-foreground">When should VaniAI work for you?</p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-8">
+                    <button 
+                      onClick={() => handleChange('useAiBestTime', !formData.useAiBestTime)}
+                      className={cn(
+                        "w-full px-8 py-6 border-2 rounded-[2rem] text-left flex items-center justify-between transition-all",
+                        formData.useAiBestTime ? "bg-primary/10 border-primary text-primary" : "bg-card border-border text-muted-foreground"
+                      )}
+                    >
+                      <div className="flex items-center gap-4">
+                        <div className={cn("p-2 rounded-xl", formData.useAiBestTime ? "bg-primary text-primary-foreground" : "bg-secondary")}>
+                          <Sparkles size={20} />
+                        </div>
+                        <div className="text-left">
+                          <p className="font-black text-lg">Enable AI-Suggested Best Posting Times</p>
+                          <p className="text-xs opacity-70">Dynamically optimize when your posts go live based on your niche.</p>
+                        </div>
+                      </div>
+                      <div className={cn("w-6 h-6 rounded-full border-2 flex items-center justify-center", formData.useAiBestTime ? "border-primary bg-primary" : "border-muted-foreground")}>
+                         {formData.useAiBestTime && <CheckCircle2 className="text-white" size={14} />}
+                      </div>
+                    </button>
+
+                    <div className="relative">
+                      <div className="absolute left-1/2 top-0 bottom-0 w-0.5 bg-border/50 -translate-x-1/2 hidden md:block" />
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-8">
+                        <div className="space-y-6">
+                          <h4 className="text-lg font-black uppercase tracking-tighter flex items-center gap-2">
+                            <Sun size={18} className="text-amber-500" /> Morning Slots
+                          </h4>
+                          <div className="space-y-4">
+                            <div className="space-y-2">
+                              <label className="text-xs font-bold text-muted-foreground uppercase tracking-widest px-1">Generate Drafts At</label>
+                              <input 
+                                type="time"
+                                value={formData.morningDraftTime}
+                                onChange={(e) => handleChange('morningDraftTime', e.target.value)}
+                                className="w-full px-5 py-4 bg-secondary/50 border-2 border-border rounded-2xl focus:border-primary focus:outline-none transition-all text-xl font-bold"
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <label className="text-xs font-bold text-muted-foreground uppercase tracking-widest px-1">Publish (If Approved) At</label>
+                              <input 
+                                type="time"
+                                value={formData.morningPublishTime}
+                                onChange={(e) => handleChange('morningPublishTime', e.target.value)}
+                                className="w-full px-5 py-4 bg-secondary/50 border-2 border-border rounded-2xl focus:border-primary focus:outline-none transition-all text-xl font-bold"
+                              />
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="space-y-6">
+                          <h4 className="text-lg font-black uppercase tracking-tighter flex items-center gap-2">
+                            <Layers size={18} className="text-indigo-500" /> Evening Slots
+                          </h4>
+                          <div className="space-y-4">
+                            <div className="space-y-2">
+                              <label className="text-xs font-bold text-muted-foreground uppercase tracking-widest px-1">Generate Drafts At</label>
+                              <input 
+                                type="time"
+                                value={formData.eveningDraftTime}
+                                onChange={(e) => handleChange('eveningDraftTime', e.target.value)}
+                                className="w-full px-5 py-4 bg-secondary/50 border-2 border-border rounded-2xl focus:border-primary focus:outline-none transition-all text-xl font-bold"
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <label className="text-xs font-bold text-muted-foreground uppercase tracking-widest px-1">Publish (If Approved) At</label>
+                              <input 
+                                type="time"
+                                value={formData.eveningPublishTime}
+                                onChange={(e) => handleChange('eveningPublishTime', e.target.value)}
+                                className="w-full px-5 py-4 bg-secondary/50 border-2 border-border rounded-2xl focus:border-primary focus:outline-none transition-all text-xl font-bold"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="pt-4">
+                      <Button 
+                        variant="secondary" 
+                        type="button"
+                        onClick={async () => {
+                          try {
+                            setIsSaving(true);
+                            const suggestions = await getSuggestedTimes();
+                            setFormData(prev => ({
+                              ...prev,
+                              morningDraftTime: suggestions.morningDraftTime,
+                              eveningDraftTime: suggestions.eveningDraftTime,
+                              morningPublishTime: suggestions.morningPublishTime,
+                              eveningPublishTime: suggestions.eveningPublishTime
+                            }));
+                            alert("AI Suggested times updated! Reason: " + suggestions.reason);
+                          } catch (e) {
+                            console.error("Failed to fetch suggestions", e);
+                            alert("Failed to fetch AI suggestions. Make sure you've filled out your niche in Step 1.");
+                          } finally {
+                            setIsSaving(false);
+                          }
+                        }}
+                        className="w-full h-16 rounded-[1.5rem] font-black gap-2 group shadow-lg"
+                      >
+                        <Zap className="group-hover:text-amber-500 transition-colors" />
+                        Suggest Optimized Times for my Niche
+                      </Button>
+                    </div>
                   </div>
                 </div>
               )}

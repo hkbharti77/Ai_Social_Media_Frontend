@@ -16,6 +16,16 @@ export const getFacebookConnectUrl = async (): Promise<string> => {
   return response.data;
 };
 
+export const getLinkedInConnectUrl = async (): Promise<string> => {
+  const response = await axiosInstance.get<string>('/social/connect/linkedin');
+  return response.data;
+};
+
+export const getXConnectUrl = async (state: string): Promise<string> => {
+  const response = await axiosInstance.get<string>(`/social/connect/x?state=${state}`);
+  return response.data;
+};
+
 export const getSocialAccounts = async (): Promise<SocialAccount[]> => {
   const response = await axiosInstance.get<SocialAccount[]>('/social/accounts');
   return response.data;

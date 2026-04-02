@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '../../lib/utils';
-import { getFacebookConnectUrl, getSocialAccounts, disconnectSocialAccount } from '../../api/social';
+import { getFacebookConnectUrl, getLinkedInConnectUrl, getXConnectUrl, getSocialAccounts, disconnectSocialAccount } from '../../api/social';
 import { toast } from 'sonner';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 
@@ -33,12 +33,22 @@ interface Platform {
   igBusinessAccountId?: string;
 }
 
+const LinkedinLogo = ({ size = 24 }: { size?: number }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z" /><rect width="4" height="12" x="2" y="9" /><circle cx="4" cy="4" r="2" /></svg>
+);
+
+const XLogo = ({ size = 24 }: { size?: number }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+);
+
 const ConnectAccountsPage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
   const [platforms, setPlatforms] = useState<Platform[]>([
     { id: 'FB', name: 'Facebook Page', type: 'Link', connected: false, handle: null, details: 'Connect your Facebook Page', icon: Link, color: 'bg-blue-600' },
     { id: 'IG', name: 'Instagram Business', type: 'Share2', connected: false, handle: null, details: 'Connect your Instagram Business', icon: Share2, color: 'bg-gradient-to-tr from-amber-500 via-rose-500 to-purple-600' },
+    { id: 'LI', name: 'LinkedIn Profile', type: 'Linkedin', connected: false, handle: null, details: 'Connect your LinkedIn Profile', icon: LinkedinLogo, color: 'bg-blue-700' },
+    { id: 'X', name: 'X / Twitter', type: 'Twitter', connected: false, handle: null, details: 'Connect your X Account', icon: XLogo, color: 'bg-black' },
   ]);
 
   const [connectingId, setConnectingId] = useState<string | null>(null);
@@ -51,18 +61,31 @@ const ConnectAccountsPage: React.FC = () => {
     // Handle OAuth callback query params FIRST before fetching
     const isSuccess = searchParams.get('success') === 'true';
     const igConnectedParam = searchParams.get('instagram');
+    const errorParam = searchParams.get('error');
+
+    if (errorParam) {
+      toast.error(`Connection failed: ${errorParam}`, { duration: 6000 });
+      const cleaned = new URLSearchParams(searchParams);
+      cleaned.delete('error');
+      setSearchParams(cleaned, { replace: true });
+    }
 
     if (isSuccess) {
-      const igAlsoConnected = igConnectedParam === 'true';
-      if (igAlsoConnected) {
-        toast.success('Facebook & Instagram connected successfully! 🎉');
+      if (searchParams.get('platform') === 'linkedin') {
+        toast.success('LinkedIn connected successfully! 🚀');
       } else {
-        toast.success('Facebook connected! Instagram needs to be linked to your FB Page to auto-connect.');
+        const igAlsoConnected = igConnectedParam === 'true';
+        if (igAlsoConnected) {
+          toast.success('Facebook & Instagram connected successfully! 🎉');
+        } else {
+          toast.success('Facebook connected! Instagram needs to be linked to your FB Page to auto-connect.');
+        }
       }
       // Clean up URL params
       const cleaned = new URLSearchParams(searchParams);
       cleaned.delete('success');
       cleaned.delete('instagram');
+      cleaned.delete('platform');
       setSearchParams(cleaned, { replace: true });
     }
 
@@ -76,7 +99,12 @@ const ConnectAccountsPage: React.FC = () => {
       const hasFB = accounts.some(a => a.platform.toUpperCase() === 'FACEBOOK');
       setFbConnected(hasFB);
       setPlatforms(prev => prev.map(p => {
-        const fullPlatform = p.id === 'FB' ? 'FACEBOOK' : 'INSTAGRAM';
+        let fullPlatform = '';
+        if (p.id === 'FB') fullPlatform = 'FACEBOOK';
+        else if (p.id === 'IG') fullPlatform = 'INSTAGRAM';
+        else if (p.id === 'LI') fullPlatform = 'LINKEDIN';
+        else if (p.id === 'X') fullPlatform = 'X';
+
         const acc = accounts.find(a => a.platform.toUpperCase() === fullPlatform);
         if (!acc) return { ...p, connected: false, handle: null, accountName: undefined, profilePictureUrl: undefined, pageId: undefined, igBusinessAccountId: undefined };
         
@@ -112,6 +140,25 @@ const ConnectAccountsPage: React.FC = () => {
         window.location.href = url;
       } catch (error) {
         console.error('Failed to get connection URL', error);
+        setConnectingId(null);
+      }
+    } else if (id === 'LI') {
+      try {
+        setConnectingId(id);
+        const url = await getLinkedInConnectUrl();
+        window.location.href = url;
+      } catch (error) {
+        console.error('Failed to get LinkedIn connection URL', error);
+        setConnectingId(null);
+      }
+    } else if (id === 'X') {
+      try {
+        setConnectingId(id);
+        const state = Math.random().toString(36).substring(2);
+        const url = await getXConnectUrl(state);
+        window.location.href = url;
+      } catch (error) {
+        console.error('Failed to get X connection URL', error);
         setConnectingId(null);
       }
     }
@@ -285,12 +332,14 @@ const ConnectAccountsPage: React.FC = () => {
                         "w-full md:w-auto gap-2 px-10 h-14 font-black uppercase tracking-widest text-[11px] shadow-2xl transition-all active:scale-95 group relative overflow-hidden",
                         platform.id === 'IG' 
                           ? "bg-gradient-to-r from-amber-500 via-rose-500 to-purple-600 border-none hover:shadow-rose-500/25" 
-                          : "bg-blue-600 hover:bg-blue-700 shadow-blue-500/20"
+                          : platform.id === 'LI'
+                            ? "bg-blue-700 hover:bg-blue-800 shadow-blue-500/20"
+                            : "bg-blue-600 hover:bg-blue-700 shadow-blue-500/20"
                       )}
                     >
                       <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity" />
                       <Link2 size={18} className="group-hover:rotate-12 transition-transform" />
-                      Connect {platform.id === 'FB' ? 'Facebook' : 'Instagram'}
+                      Connect {platform.id === 'FB' ? 'Facebook' : platform.id === 'IG' ? 'Instagram' : platform.id === 'LI' ? 'LinkedIn' : 'X'}
                     </Button>
                   )}
                 </div>

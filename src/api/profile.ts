@@ -36,6 +36,13 @@ export interface ProfileData {
   referenceImageUrl?: string | null;
   negativePrompt?: string;
   
+  // Dynamic Scheduling Fields
+  morningDraftTime?: string;
+  eveningDraftTime?: string;
+  morningPublishTime?: string;
+  eveningPublishTime?: string;
+  useAiBestTime?: boolean;
+  
   user?: any;
 }
 
@@ -46,8 +53,12 @@ export interface ProfileResponse {
     tierOrdinal: number;
     monthlyCredits: number;
     dailyCreditsUsed: number;
+    purchasedModelIds: string[];
+    maxProfiles: number;
     lastGenerationAt: string;
     expiresAt?: string;
+    storedImagesCount: number;
+    maxStoredImages: number;
   };
 }
 
@@ -56,7 +67,25 @@ export const getProfile = async (): Promise<ProfileResponse> => {
   return response.data;
 };
 
+export const listProfilesApi = async (): Promise<ProfileData[]> => {
+  const response = await axios.get<ProfileData[]>('/profile/all');
+  return response.data;
+};
+
 export const updateProfile = async (data: ProfileData): Promise<ProfileData> => {
   const response = await axios.put<ProfileData>('/profile', data);
+  return response.data;
+};
+
+export interface SuggestedTimes {
+  morningDraftTime: string;
+  eveningDraftTime: string;
+  morningPublishTime: string;
+  eveningPublishTime: string;
+  reason: string;
+}
+
+export const getSuggestedTimes = async (): Promise<SuggestedTimes> => {
+  const response = await axios.get<SuggestedTimes>('/profile/suggest-best-time');
   return response.data;
 };

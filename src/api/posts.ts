@@ -28,6 +28,14 @@ export interface Post {
   scheduledAt?: string;
   publishedAt?: string;
   failureReason?: string;
+  isThread?: boolean;
+  threadContent?: string;
+  isCarousel?: boolean;
+  carouselContent?: string;
+  // Evergreen Queue fields
+  isEvergreen?: boolean;
+  evergreenScore?: number;
+  lastRecycledAt?: string;
 }
 
 export const getPostsApi = async (): Promise<Post[]> => {
@@ -73,6 +81,36 @@ export const approveDraftApi = async (id: number): Promise<Post> => {
 
 export const generateDraftApi = async (slot: 'MORNING' | 'EVENING'): Promise<Post> => {
   const response = await axiosInstance.post<Post>('/posts/generate-draft', null, {
+    params: { slot }
+  });
+  return response.data;
+};
+
+// ─── Evergreen Queue API ───────────────────────────────────────────
+
+export const getEvergreenPostsApi = async (): Promise<Post[]> => {
+  const response = await axiosInstance.get<Post[]>('/posts/evergreen');
+  return response.data;
+};
+
+export const markEvergreenApi = async (id: number): Promise<Post> => {
+  const response = await axiosInstance.put<Post>(`/posts/${id}/evergreen`);
+  return response.data;
+};
+
+export const unmarkEvergreenApi = async (id: number): Promise<Post> => {
+  const response = await axiosInstance.delete<Post>(`/posts/${id}/evergreen`);
+  return response.data;
+};
+
+export interface EvergreenFillResult {
+  message: string;
+  scheduledPostId?: number;
+  scheduledAt?: string;
+}
+
+export const triggerEvergreenFillApi = async (slot: 'MORNING' | 'EVENING' = 'MORNING'): Promise<EvergreenFillResult> => {
+  const response = await axiosInstance.post<EvergreenFillResult>('/posts/evergreen/fill', null, {
     params: { slot }
   });
   return response.data;

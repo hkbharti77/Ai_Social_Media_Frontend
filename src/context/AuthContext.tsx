@@ -5,6 +5,10 @@ export interface User {
   email: string;
   name?: string;
   roles?: string[];
+  monthlyCredits?: number;
+  dailyCreditsUsed?: number;
+  subscriptionTier?: string;
+  purchasedModelIds?: string[];
 }
 
 interface AuthState {

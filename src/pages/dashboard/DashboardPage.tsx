@@ -3,30 +3,26 @@ import PageWrapper from '../../components/layout/PageWrapper';
 import { Button } from '../../components/ui/Button';
 import { 
   Plus, 
-  Calendar, 
-  AlertCircle, 
+  Calendar,
   CheckCircle2,
-  MoreVertical,
   Clock,
-  Share2,
-  Link as LinkIcon,
-  Edit2,
   LayoutGrid,
   TrendingUp,
   Sparkles,
   Download,
   Link2,
-  Sunrise,
-  Sunset,
-  FileText,
+  Share2,
+  Link as LinkIcon,
+  Loader2,
   Activity,
-  Loader2
+  FileText
 } from 'lucide-react';
 import { downloadMonthlyRoiReportApi } from '../../api/reports';
 import { getBestTimeApi, type BestTimeReport } from '../../api/insights';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '../../lib/utils';
+import PostCard from '../../components/dashboard/PostCard';
 import PostEditorModal from '../../components/dashboard/PostEditorModal';
 import { toast } from 'sonner';
 import { 
@@ -34,11 +30,16 @@ import {
   deletePostApi, 
   getPostStatsApi, 
   approveDraftApi,
+  markEvergreenApi,
+  unmarkEvergreenApi,
   type Post, 
   type DashboardStats 
 } from '../../api/posts';
 import { getSocialAccounts, type SocialAccount } from '../../api/social';
 import { listMediaApi } from '../../api/media';
+import { getProfile, type ProfileResponse } from '../../api/profile';
+import { ConfirmModal } from '../../components/ui/ConfirmModal';
+import AiUsageDashboard from '../../components/dashboard/UsageDashboard';
 
 const DashboardPage: React.FC = () => {
   const [posts, setPosts] = useState<Post[]>([]);
@@ -48,6 +49,7 @@ const DashboardPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('All');
   const [bestTime, setBestTime] = useState<BestTimeReport | null>(null);
+  const [subscription, setSubscription] = useState<ProfileResponse['subscription'] | null>(null);
   const [isDownloadingReport, setIsDownloadingReport] = useState(false);
   const navigate = useNavigate();
   
@@ -55,6 +57,10 @@ const DashboardPage: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState<'create' | 'edit'>('create');
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [postTargetId, setPostTargetId] = useState<number | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [evergreenLoadingId, setEvergreenLoadingId] = useState<number | null>(null);
 
   useEffect(() => {
     fetchPosts();
@@ -85,16 +91,18 @@ const DashboardPage: React.FC = () => {
   const fetchPosts = async () => {
     setIsLoading(true);
     try {
-      const [postsData, statsData, accountsData, mediaData] = await Promise.all([
+      const [postsData, statsData, accountsData, mediaData, profileData] = await Promise.all([
         getPostsApi(),
         getPostStatsApi(),
         getSocialAccounts(),
-        listMediaApi()
+        listMediaApi(),
+        getProfile()
       ]);
       setPosts(postsData);
       setStats(statsData);
       setAccounts(accountsData);
-      setRecentMedia(mediaData.slice(0, 6)); // Show latest 6
+      setRecentMedia(mediaData.slice(0, 6)); 
+      setSubscription(profileData.subscription);
     } catch (error) {
       console.error('Failed to fetch dashboard data', error);
       toast.error("Cloud sync failed. Check your connection.");
@@ -103,11 +111,13 @@ const DashboardPage: React.FC = () => {
     }
   };
 
-  const filteredPosts = activeTab === 'All' 
-    ? posts 
+  const filteredPosts = activeTab === 'All'
+    ? posts
+    : activeTab === 'Evergreen'
+    ? posts.filter(post => post.isEvergreen)
     : posts.filter(post => post.status === activeTab.toUpperCase());
 
-  const tabs = ['All', 'Draft', 'Scheduled', 'Published', 'Failed'];
+  const tabs = ['All', 'Draft', 'Scheduled', 'Published', 'Evergreen', 'Failed'];
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -131,14 +141,23 @@ const DashboardPage: React.FC = () => {
     setIsModalOpen(true);
   };
 
-  const handleDeletePost = async (id: number) => {
-    if (!window.confirm("Are you sure you want to delete this transmission?")) return;
+  const handleDeletePost = (id: number) => {
+    setPostTargetId(id);
+    setIsDeleteModalOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!postTargetId) return;
+    setIsDeleting(true);
     try {
-      await deletePostApi(id);
+      await deletePostApi(postTargetId);
       toast.success("Post removed from archive");
       fetchPosts();
+      setIsDeleteModalOpen(false);
     } catch (error) {
       toast.error("Failed to delete post");
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -152,29 +171,49 @@ const DashboardPage: React.FC = () => {
   const handleApprovePost = async (id: number) => {
     try {
       await approveDraftApi(id);
-      toast.success("Post approved & scheduled for IST slot.");
+      toast.success('Post approved & scheduled for IST slot.');
       fetchPosts();
     } catch (error) {
-      toast.error("Failed to approve post.");
+      toast.error('Failed to approve post.');
     }
   };
 
-  const getSlotBadge = (post: Post) => {
-    if (!post.slotType) return null;
-    return (
-      <div className={cn(
-        "absolute top-6 left-6 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 backdrop-blur-md border border-white/10 shadow-xl",
-        post.slotType === 'MORNING' ? 'bg-amber-500/80 text-white' : 'bg-indigo-600/80 text-white'
-      )}>
-        {post.slotType === 'MORNING' ? <Sunrise size={14} /> : <Sunset size={14} />}
-        {post.slotType} SLOT
-      </div>
-    );
+  const handleToggleEvergreen = async (post: Post) => {
+    if (!post.id) return;
+    setEvergreenLoadingId(post.id);
+    try {
+      if (post.isEvergreen) {
+        await unmarkEvergreenApi(post.id);
+        toast.success('Removed from Evergreen Queue.');
+      } else {
+        await markEvergreenApi(post.id);
+        toast.success('🌿 Added to Evergreen Queue!');
+      }
+      fetchPosts();
+    } catch (e: any) {
+      if (e?.response?.status === 400) {
+        toast.error('Only published posts can be marked Evergreen.');
+      } else {
+        toast.error('Failed to update Evergreen status.');
+      }
+    } finally {
+      setEvergreenLoadingId(null);
+    }
   };
 
   return (
     <PageWrapper>
-      <div className="space-y-12 pb-20">
+      {/* SVG Gradient Definitions for Evergreen Icons */}
+      <svg width="0" height="0" className="absolute">
+        <defs>
+          <linearGradient id="leaf-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#34d399" />
+            <stop offset="100%" stopColor="#fbbf24" />
+          </linearGradient>
+        </defs>
+      </svg>
+
+      <div className="space-y-14 pb-20">
         <header className="flex flex-col md:flex-row justify-between items-start md:items-end gap-8">
           <div className="space-y-2">
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-black tracking-tighter">Content Studio</h1>
@@ -266,7 +305,7 @@ const DashboardPage: React.FC = () => {
             { label: 'Pending Drafts', value: stats.draftCount, icon: Clock, color: 'text-blue-400' },
             { label: 'Queued Posts', value: stats.scheduledCount, icon: Calendar, color: 'text-amber-400' },
             { label: 'Viral Hits', value: stats.publishedCount, icon: TrendingUp, color: 'text-emerald-400' },
-            { label: 'Review Needed', value: stats.failedCount, icon: AlertCircle, color: 'text-rose-400' },
+            { label: 'AI Credits', value: subscription?.monthlyCredits?.toFixed(2) || '0.00', icon: Sparkles, color: 'text-primary' },
           ].map((stat) => (
             <div key={stat.label} className="bg-card/40 backdrop-blur-xl border-2 border-white/5 p-8 rounded-[2.5rem] space-y-4 hover:border-primary/30 transition-all group shadow-2xl relative overflow-hidden">
               <div className="flex justify-between items-start">
@@ -275,9 +314,17 @@ const DashboardPage: React.FC = () => {
                 </div>
                 <div className="text-[10px] font-black text-muted-foreground/40 uppercase tracking-[0.2em] pt-1">{stat.label}</div>
               </div>
-              <p className="text-5xl font-black tracking-tighter">{stat.value}</p>
+              <p className={cn(
+                "font-black tracking-tighter",
+                stat.label === 'AI Credits' ? "text-4xl" : "text-5xl"
+              )}>{stat.value}</p>
             </div>
           ))}
+        </div>
+
+        {/* AI Usage Intelligence Dashboard */}
+        <div className="grid grid-cols-1 gap-8">
+          <AiUsageDashboard />
         </div>
         
         {/* Connected Channels Summary */}
@@ -381,88 +428,16 @@ const DashboardPage: React.FC = () => {
               >
                 <AnimatePresence mode="popLayout">
                   {filteredPosts.map((post) => (
-                    <motion.div 
+                    <PostCard 
                       key={post.id}
-                      layout
-                      initial={{ opacity: 0, y: 30, scale: 0.95 }}
-                      animate={{ opacity: 1, y: 0, scale: 1 }}
-                      exit={{ opacity: 0, scale: 0.95 }}
-                      transition={{ type: 'spring', damping: 20, stiffness: 100 }}
-                      className="group bg-card/60 backdrop-blur-lg border-2 border-white/5 rounded-[3rem] overflow-hidden transition-all duration-500 hover:border-primary/50 hover:shadow-[0_40px_80px_rgba(0,0,0,0.5)] flex flex-col h-full shadow-2xl"
-                    >
-                      <div className="aspect-video bg-secondary/30 relative overflow-hidden">
-                        {post.imageUrl ? (
-                          <img 
-                            src={post.imageUrl} 
-                            alt="Output" 
-                            className="object-cover w-full h-full group-hover:scale-110 transition-transform duration-1000 ease-out"
-                          />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center bg-primary/5">
-                            <Sparkles className="text-primary/20" size={48} />
-                          </div>
-                        )}
-                        <div className="absolute top-6 right-6">
-                           <div className="bg-black/60 backdrop-blur-md p-2 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] px-4 flex items-center gap-2 border border-white/10 shadow-2xl text-white">
-                            {post.platform === 'INSTAGRAM' ? <Share2 size={14} className="text-pink-400" /> : <LinkIcon size={14} className="text-blue-400" />}
-                            {post.platform}
-                          </div>
-                        </div>
-                        {getSlotBadge(post)}
-                      </div>
-                      <div className="p-10 flex-1 flex flex-col justify-between space-y-8">
-                        <div className="flex justify-between items-start gap-4">
-                          <p className="text-xl font-bold line-clamp-3 text-foreground/90 leading-relaxed tracking-tight">
-                            {post.caption} <span className="text-primary">{post.hashtags}</span>
-                          </p>
-                          <div className="relative group/more">
-                             <button className="text-muted-foreground/40 hover:text-foreground p-3 hover:bg-white/5 rounded-2xl transition-all shrink-0 border border-transparent hover:border-white/5">
-                              <MoreVertical size={24} />
-                            </button>
-                            <div className="absolute right-0 top-full mt-2 hidden group-hover/more:block bg-card border-2 border-white/5 p-2 rounded-2xl shadow-2xl z-50 min-w-[120px]">
-                               <button 
-                                onClick={() => handleDeletePost(post.id!)}
-                                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-rose-500 hover:bg-rose-500/10 text-xs font-black uppercase tracking-widest"
-                               >
-                                Delete
-                               </button>
-                            </div>
-                          </div>
-                        </div>
-                        <div className="flex items-center justify-between pt-4 border-t border-white/5">
-                          <div className={cn(
-                            "flex items-center gap-2.5 text-[10px] font-black uppercase tracking-[0.2em] px-5 py-3 rounded-full border shadow-inner",
-                            getStatusColor(post.status)
-                          )}>
-                            {post.status === 'SCHEDULED' && <Calendar size={14} />}
-                            {post.status === 'DRAFT' && <Clock size={14} />}
-                            {post.status === 'PUBLISHED' && <CheckCircle2 size={14} />}
-                            {post.status === 'FAILED' && <AlertCircle size={14} />}
-                            {post.status}
-                          </div>
-                          <div className="flex items-center gap-3">
-                            <Button 
-                              variant="ghost" 
-                              size="sm" 
-                              onClick={() => handleEditPost(post)}
-                              className="gap-2.5 font-black uppercase tracking-widest text-[10px] px-6 h-12 rounded-[1.25rem] border border-white/5 hover:bg-white/5 hover:border-white/10 transition-all"
-                            >
-                              <Edit2 size={14} className="text-primary" />
-                              Edit
-                            </Button>
-                            {post.status === 'DRAFT' && post.slotType && (
-                              <Button 
-                                size="sm" 
-                                onClick={() => handleApprovePost(post.id!)}
-                                className="bg-emerald-500 hover:bg-emerald-600 font-black uppercase tracking-widest text-[10px] px-6 h-12 rounded-[1.25rem] shadow-lg shadow-emerald-500/20 active:scale-95 transition-all"
-                              >
-                                Approve
-                              </Button>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    </motion.div>
+                      post={post}
+                      onEdit={handleEditPost}
+                      onDelete={handleDeletePost}
+                      onToggleEvergreen={handleToggleEvergreen}
+                      onApprove={handleApprovePost}
+                      evergreenLoadingId={evergreenLoadingId}
+                      getStatusColor={getStatusColor}
+                    />
                   ))}
                 </AnimatePresence>
               </motion.div>
@@ -538,6 +513,17 @@ const DashboardPage: React.FC = () => {
         onSave={handleSavePost}
         mode={modalMode}
         initialData={selectedPost}
+      />
+      
+      <ConfirmModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+        onConfirm={handleConfirmDelete}
+        title="Delete Transmission"
+        message="Are you sure you want to delete this transmission? This action is permanent and will remove the post from your archive."
+        confirmText="Destroy"
+        variant="danger"
+        isLoading={isDeleting}
       />
     </PageWrapper>
   );

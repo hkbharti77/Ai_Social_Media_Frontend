@@ -262,7 +262,7 @@ const PricingPage: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                 {[
                     { icon: ShieldCheck, title: "Data Isolation", desc: "Your training data and generated media are strictly scoped to your account." },
-                    { icon: Cpu, title: "Neural Engine", desc: "Powered by Gemini 1.5 Pro and Imagen 3 for state-of-the-art creativity." },
+                    { icon: Cpu, title: "Neural Engine", desc: "Powered by Gemini 3.0 Pro and Imagen 4 for state-of-the-art creativity." },
                     { icon: History, title: "Usage Analytics", desc: "Real-time tracking of your AI credits and generation frequency." }
                 ].map((item, i) => (
                     <div key={i} className="p-8 rounded-[2rem] bg-secondary/20 border border-white/5 space-y-4 hover:border-white/10 transition-colors">

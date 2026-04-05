@@ -28,7 +28,7 @@ const ReviewButlerPage: React.FC = () => {
     try {
       const data = await getReviewsApi();
       setReviews(data);
-    } catch (error) {
+    } catch {
       toast.error("Failed to fetch Facebook reviews.");
     } finally {
       setIsLoading(false);
@@ -41,7 +41,7 @@ const ReviewButlerPage: React.FC = () => {
       const reply = await generateReviewReplyApi(review);
       setReplies(prev => ({ ...prev, [review.id]: reply }));
       toast.success("AI Draft generated!");
-    } catch (error) {
+    } catch {
       toast.error("Failed to generate AI reply.");
     } finally {
       setIsGenerating(prev => ({ ...prev, [review.id]: false }));
@@ -57,7 +57,7 @@ const ReviewButlerPage: React.FC = () => {
       await postReviewReplyApi({ reviewId, replyText });
       toast.success("Reply posted to Facebook!");
       // Optionally remove or mark as replied
-    } catch (error) {
+    } catch {
       toast.error("Failed to post reply.");
     } finally {
       setIsPosting(prev => ({ ...prev, [reviewId]: false }));

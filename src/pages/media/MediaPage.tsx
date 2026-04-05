@@ -62,7 +62,8 @@ const MediaPage: React.FC = () => {
       toast.success('Media uploaded successfully!', {
         icon: <CheckCircle2 size={16} className="text-emerald-500" />
       });
-    } catch (error: any) {
+    } catch (err) {
+      const error = err as { response?: { data?: { error?: string } } };
       console.error('Upload failed', error);
       toast.error(error?.response?.data?.error || 'Upload failed. Please try again.');
     } finally {
@@ -84,7 +85,8 @@ const MediaPage: React.FC = () => {
       await deleteMediaApi(assetToDelete);
       setMediaAssets(prev => prev.filter(item => item.url !== assetToDelete));
       toast.success('Asset deleted successfully');
-    } catch (error: any) {
+    } catch (err) {
+      const error = err as { response?: { data?: { error?: string } } };
       console.error('Delete failed', error);
       toast.error(error?.response?.data?.error || 'Failed to delete asset');
     } finally {

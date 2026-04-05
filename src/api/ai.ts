@@ -12,6 +12,8 @@ export interface PostGenerationRequest {
   command: string;
   count: number;
   modelId?: string;
+  aspectRatio?: string;
+  voiceMode?: string;
 }
 
 export interface GenerationResponse {
@@ -20,6 +22,11 @@ export interface GenerationResponse {
 
 export const generatePostsApi = async (data: PostGenerationRequest): Promise<GenerationResponse> => {
   const response = await axiosInstance.post<GenerationResponse>('/ai/generate', data);
+  return response.data;
+};
+
+export const generateStoryApi = async (data: PostGenerationRequest): Promise<GenerationResponse> => {
+  const response = await axiosInstance.post<GenerationResponse>('/ai/story', data);
   return response.data;
 };
 
@@ -64,6 +71,7 @@ export const predictPerformanceApi = async (draft: string): Promise<PerformanceP
 export interface MemeRequest {
   modelId?: string;
   command?: string;
+  voiceMode?: string;
 }
 
 export interface MemeResponse {
@@ -101,6 +109,8 @@ export interface CarouselGenerationRequest {
   command?: string;
   slideCount?: number;
   modelId?: string;
+  aspectRatio?: string;
+  voiceMode?: string;
 }
 
 export interface CarouselSlide {
@@ -123,9 +133,59 @@ export const generateCarouselApi = async (data: CarouselGenerationRequest): Prom
 export interface RepurposeRequest {
   url: string;
   modelId?: string;
+  count?: number;
+  aspectRatio?: string;
 }
 
 export const repurposeUrlApi = async (data: RepurposeRequest): Promise<GenerationResponse> => {
   const response = await axiosInstance.post<GenerationResponse>('/ai/repurpose', data);
+  return response.data;
+};
+
+export interface PollResponse {
+  caption: string;
+  options: string[];
+  hashtags: string[];
+  durationMinutes: number;
+  imageUrl?: string;
+  imageSuggestion?: string;
+}
+
+export const generatePollApi = async (data: PostGenerationRequest): Promise<PollResponse> => {
+  const response = await axiosInstance.post<PollResponse>('/ai/poll', data);
+  return response.data;
+};
+
+export interface ReelResponse {
+  caption: string;
+  hashtags: string[];
+  imageUrl: string;
+  imageSuggestion: string;
+  videoScript: string;
+  audioSuggestion: string;
+}
+
+export const generateReelApi = async (data: PostGenerationRequest): Promise<ReelResponse> => {
+  const response = await axiosInstance.post<ReelResponse>('/ai/reel', data);
+  return response.data;
+};
+export interface CampaignGenerationRequest {
+  goal: string;
+  modelId?: string;
+  aspectRatio?: string;
+  voiceMode?: string;
+}
+
+export interface CampaignResponse {
+  strategySummary: string;
+  visualTheme: string;
+  posts: GeneratedPost[];
+  stories: GeneratedPost[];
+  reel: ReelResponse;
+  hashtags: string[];
+}
+
+export const generateCampaignApi = async (data: CampaignGenerationRequest): Promise<CampaignResponse> => {
+  const response = await axiosInstance.post<CampaignResponse>('/ai/campaign', data);
   return response.data;
 };

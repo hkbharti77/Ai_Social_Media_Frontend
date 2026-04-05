@@ -8,7 +8,7 @@ export interface ModelOption {
   name: string;
   cost: number;
   tier: number;
-  icon: any;
+  icon: React.ElementType;
   desc: string;
 }
 

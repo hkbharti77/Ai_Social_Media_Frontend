@@ -24,7 +24,7 @@ interface Platform {
   connected: boolean;
   handle: string | null;
   details: string;
-  icon: any;
+  icon: React.ElementType;
   color: string;
   dbId?: number;
   accountName?: string;
@@ -91,7 +91,7 @@ const ConnectAccountsPage: React.FC = () => {
 
     // Always refresh account list on mount
     fetchConnectedAccounts();
-  }, []); // ← only on mount, not on every searchParams change
+  }, [searchParams, setSearchParams]); // ← handle callback params when they arrive and refresh
 
   const fetchConnectedAccounts = async () => {
     try {
@@ -277,7 +277,7 @@ const ConnectAccountsPage: React.FC = () => {
                   ) : platform.connected ? (
                     <Button 
                       variant="ghost" 
-                      onClick={() => handleDisconnect(platform.id, (platform as any).dbId)}
+                      onClick={() => handleDisconnect(platform.id, platform.dbId)}
                       className="w-full md:w-auto text-destructive border-transparent hover:bg-destructive/10 px-6 gap-2"
                     >
                       <XCircle size={18} />

@@ -112,8 +112,8 @@ const BusinessProfilePage: React.FC = () => {
             useAiBestTime: p.useAiBestTime || false
           }));
         }
-      } catch (error) {
-        console.error("Failed to load profile", error);
+      } catch {
+        console.error("Failed to load profile");
       } finally {
         setIsLoading(false);
       }
@@ -121,7 +121,7 @@ const BusinessProfilePage: React.FC = () => {
     fetchProfile();
   }, []);
 
-  const handleChange = (field: keyof ProfileData, value: any) => {
+  const handleChange = <K extends keyof ProfileData>(field: K, value: ProfileData[K]) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
@@ -139,8 +139,8 @@ const BusinessProfilePage: React.FC = () => {
       try {
         await updateProfile(formData);
         setIsFinished(true);
-      } catch (error) {
-        console.error("Failed to save profile", error);
+      } catch {
+        console.error("Failed to save profile");
         alert("Failed to save profile. Please try again.");
       } finally {
         setIsSaving(false);
@@ -574,7 +574,11 @@ const BusinessProfilePage: React.FC = () => {
                       </label>
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <button 
-                          onClick={() => handleChange('textOverlay', { ...formData.textOverlay, enabled: !formData.textOverlay?.enabled })}
+                          onClick={() => handleChange('textOverlay', { 
+                            enabled: !formData.textOverlay?.enabled,
+                            style: formData.textOverlay?.style || '',
+                            position: formData.textOverlay?.position || ''
+                          })}
                           className={cn(
                             "px-5 py-4 border-2 rounded-2xl font-bold transition-all text-left flex justify-between items-center",
                             formData.textOverlay?.enabled ? "bg-primary/10 border-primary text-primary" : "bg-secondary/30 border-border text-muted-foreground"
@@ -589,12 +593,20 @@ const BusinessProfilePage: React.FC = () => {
                             <input 
                               placeholder="Overlay Style (e.g. bold modern)"
                               value={formData.textOverlay?.style || ''}
-                              onChange={(e) => handleChange('textOverlay', { ...formData.textOverlay, style: e.target.value })}
+                              onChange={(e) => handleChange('textOverlay', { 
+                                enabled: formData.textOverlay?.enabled || false,
+                                style: e.target.value,
+                                position: formData.textOverlay?.position || ''
+                              })}
                               className="px-5 py-4 bg-secondary/50 border-2 border-border rounded-2xl focus:border-primary focus:outline-none transition-all"
                             />
                             <select 
                               value={formData.textOverlay?.position || ''}
-                              onChange={(e) => handleChange('textOverlay', { ...formData.textOverlay, position: e.target.value })}
+                              onChange={(e) => handleChange('textOverlay', { 
+                                enabled: formData.textOverlay?.enabled || false,
+                                style: formData.textOverlay?.style || '',
+                                position: e.target.value
+                              })}
                               className="px-5 py-4 bg-secondary/50 border-2 border-border rounded-2xl focus:border-primary focus:outline-none transition-all"
                             >
                               {['top-left', 'top-right', 'bottom-left', 'bottom-right', 'center'].map(p => (
@@ -742,8 +754,7 @@ const BusinessProfilePage: React.FC = () => {
                               eveningPublishTime: suggestions.eveningPublishTime
                             }));
                             alert("AI Suggested times updated! Reason: " + suggestions.reason);
-                          } catch (e) {
-                            console.error("Failed to fetch suggestions", e);
+                          } catch {
                             alert("Failed to fetch AI suggestions. Make sure you've filled out your niche in Step 1.");
                           } finally {
                             setIsSaving(false);

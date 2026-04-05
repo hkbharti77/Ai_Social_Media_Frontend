@@ -62,10 +62,10 @@ export const getUsageHistory = async (): Promise<CreditUsage[]> => {
 
 export const getAiUsageLogs = async (): Promise<AiUsageLog[]> => {
   const response = await axios.get<AiUsageLog[]>('/usage/ai-logs');
-  return response.data;
+  return Array.isArray(response.data) ? response.data : [];
 };
 
 export const getAiUsageSummary = async (): Promise<AiUsageSummary[]> => {
   const response = await axios.get<AiUsageSummary[]>('/usage/ai-summary');
-  return response.data;
+  return Array.isArray(response.data) ? response.data : [];
 };

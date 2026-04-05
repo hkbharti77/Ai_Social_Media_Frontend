@@ -12,19 +12,32 @@ import { toast } from 'sonner';
 interface UpgradeModalProps {
   isOpen: boolean;
   onClose: () => void;
+  currentTierOrdinal?: number;
   message?: string;
 }
 
-const tierStyles: Record<string, any> = {
+interface TierStyle {
+  icon: React.ElementType;
+  color: string;
+  bg: string;
+  popular?: boolean;
+}
+
+const tierStyles: Record<string, TierStyle> = {
   'Standard': { icon: Zap, color: 'text-blue-400', bg: 'bg-blue-400/10' },
   'Pro': { icon: Star, color: 'text-primary', bg: 'bg-primary/10', popular: true },
   'Super Pro': { icon: Rocket, color: 'text-purple-400', bg: 'bg-purple-400/10' },
 };
 
-export const UpgradeModal: React.FC<UpgradeModalProps> = ({ isOpen, onClose, message }) => {
+interface RazorpayInstance {
+  open: () => void;
+}
+
+export const UpgradeModal: React.FC<UpgradeModalProps> = ({ isOpen, onClose, currentTierOrdinal = -1, message }) => {
   const navigate = useNavigate();
   const [tiers, setTiers] = React.useState<PricingTier[]>([]);
   const [isLoading, setIsLoading] = React.useState(false);
+  const [previews, setPreviews] = React.useState<Record<string, any>>({});
 
   React.useEffect(() => {
     if (isOpen) {
@@ -36,8 +49,27 @@ export const UpgradeModal: React.FC<UpgradeModalProps> = ({ isOpen, onClose, mes
     setIsLoading(true);
     try {
       const data = await getPricingTiersApi();
-      // Filter out Free tier for upgrade modal
-      setTiers(data.filter(t => t.name.toLowerCase() !== 'free'));
+      // Filter out Free tier and current/lower plans
+      const upgradeTiers = data.filter(t => 
+        t.name.toLowerCase() !== 'free' && 
+        t.tierOrdinal > currentTierOrdinal
+      );
+      setTiers(upgradeTiers);
+      
+      // Fetch previews for all tiers to show discounts immediately
+      const previewPromises = upgradeTiers.map(t => 
+        import('../../api/payment').then(m => m.getUpgradePreview(t.name))
+          .then(p => ({ name: t.name, preview: p }))
+          .catch(() => null)
+      );
+      
+      const results = await Promise.all(previewPromises);
+      const previewMap: Record<string, any> = {};
+      results.forEach(res => {
+        if (res) previewMap[res.name] = res.preview;
+      });
+      setPreviews(previewMap);
+
     } catch (e) {
       console.error('Failed to fetch upgrade tiers', e);
     } finally {
@@ -50,7 +82,8 @@ export const UpgradeModal: React.FC<UpgradeModalProps> = ({ isOpen, onClose, mes
     
     try {
       // 1. Create Order
-      const order = await createRazorpayOrder(tier.name, tier.priceAmount);
+      const order = await createRazorpayOrder(tier.name);
+// ... existing razorpay logic ...
       
       // Handle Free tier directly if returned by backend
       if (order.is_free) {
@@ -71,7 +104,7 @@ export const UpgradeModal: React.FC<UpgradeModalProps> = ({ isOpen, onClose, mes
         name: "VaniAI",
         description: `Upgrade to ${tier.name} Plan`,
         order_id: order.order_id,
-        handler: async (response: any) => {
+        handler: async (response: { razorpay_order_id: string; razorpay_payment_id: string; razorpay_signature: string }) => {
           console.log('Payment Response:', response);
           const verifyingToast = toast.loading("Verifying payment...");
           try {
@@ -86,7 +119,7 @@ export const UpgradeModal: React.FC<UpgradeModalProps> = ({ isOpen, onClose, mes
             });
             onClose();
             navigate('/settings');
-          } catch (error) {
+          } catch {
             toast.error("Payment verification failed", { id: verifyingToast });
           }
         },
@@ -104,7 +137,7 @@ export const UpgradeModal: React.FC<UpgradeModalProps> = ({ isOpen, onClose, mes
         }
       };
 
-      const rzp = new (window as any).Razorpay(options);
+      const rzp = new (window as unknown as { Razorpay: new (options: unknown) => RazorpayInstance }).Razorpay(options);
       rzp.open();
       toast.dismiss(loadingToast);
       
@@ -150,6 +183,9 @@ export const UpgradeModal: React.FC<UpgradeModalProps> = ({ isOpen, onClose, mes
             {tiers.map((tier) => {
               const style = tierStyles[tier.name] || tierStyles['Standard'];
               const Icon = style.icon;
+              const preview = previews[tier.name];
+              const displayPrice = preview ? `₹${preview.proRatedPrice}` : tier.priceInr;
+              const hasDiscount = preview && preview.discountApplied > 0;
               
               return (
                 <motion.div
@@ -164,6 +200,12 @@ export const UpgradeModal: React.FC<UpgradeModalProps> = ({ isOpen, onClose, mes
                       Most Popular
                     </div>
                   )}
+
+                  {hasDiscount && (
+                    <div className="absolute top-2 right-2 bg-green-500/20 text-green-400 text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full border border-green-500/30">
+                      Save ₹{preview.discountApplied}
+                    </div>
+                  )}
                   
                   <div className="space-y-4">
                     <div className={`w-12 h-12 ${style.bg} ${style.color} rounded-xl flex items-center justify-center`}>
@@ -173,18 +215,29 @@ export const UpgradeModal: React.FC<UpgradeModalProps> = ({ isOpen, onClose, mes
                       <h4 className="font-black text-xl tracking-tight text-foreground uppercase italic">{tier.name}</h4>
                       <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest leading-tight mt-1">{tier.description}</p>
                     </div>
-                    <div className="flex items-baseline gap-1">
-                      <span className="text-2xl font-black text-foreground">{tier.priceInr}</span>
-                      <span className="text-[10px] font-bold text-muted-foreground uppercase">/mo</span>
+                    <div className="flex flex-col">
+                      {hasDiscount && (
+                        <span className="text-[10px] font-bold text-muted-foreground line-through opacity-50">
+                          {tier.priceInr}
+                        </span>
+                      )}
+                      <div className="flex items-baseline gap-1">
+                        <span className="text-2xl font-black text-foreground">{displayPrice}</span>
+                        <span className="text-[10px] font-bold text-muted-foreground uppercase">/mo</span>
+                      </div>
                     </div>
                     <div className="space-y-2">
                       <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-foreground/80">
                         <Check size={14} className="text-green-500" />
-                        {tier.monthlyCredits.toLocaleString()} Credits
+                        {(tier.monthlyCredits || 0).toLocaleString()} AI Credits
                       </div>
                       <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-foreground/80">
                         <Check size={14} className="text-green-500" />
-                        Fast Speed
+                        {tier.dailyLimit === -1 ? 'Unlimited' : tier.dailyLimit} Daily Posts
+                      </div>
+                      <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-foreground/80">
+                         <Check size={14} className="text-green-500" />
+                         Full Brand Voice
                       </div>
                     </div>
                   </div>
@@ -196,7 +249,7 @@ export const UpgradeModal: React.FC<UpgradeModalProps> = ({ isOpen, onClose, mes
                       !tier.popular && 'border-white/10'
                     }`}
                   >
-                    Select {tier.name}
+                    Upgrade to {tier.name}
                   </Button>
                 </motion.div>
               );

@@ -22,8 +22,9 @@ const AiUsageDashboard: React.FC = () => {
         fetchSummary();
     }, []);
 
-    const totalTokens = summary.reduce((acc, curr) => acc + curr.totalTokens, 0);
-    const totalPrompt = summary.reduce((acc, curr) => acc + curr.promptTokens, 0);
+    const summaryData = Array.isArray(summary) ? summary : [];
+    const totalTokens = summaryData.reduce((acc, curr) => acc + (curr.totalTokens || 0), 0);
+    const totalPrompt = summaryData.reduce((acc, curr) => acc + (curr.promptTokens || 0), 0);
 
     const getModelColor = (modelId: string) => {
         if (modelId.includes('pro')) return 'text-purple-400 bg-purple-400/10 border-purple-500/20';
@@ -105,7 +106,7 @@ const AiUsageDashboard: React.FC = () => {
                     <BarChart3 className="w-4 h-4" /> Usage by Model
                 </h5>
                 <AnimatePresence>
-                    {summary.map((item, index) => (
+                    {summaryData.map((item, index) => (
                         <motion.div 
                             key={item.modelId}
                             initial={{ opacity: 0, x: -20 }}

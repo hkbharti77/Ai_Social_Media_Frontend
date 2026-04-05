@@ -1,21 +1,6 @@
-import React, { createContext, useContext, useReducer, useEffect, type ReactNode } from 'react';
-
-export interface User {
-  id: string | number;
-  email: string;
-  name?: string;
-  roles?: string[];
-  monthlyCredits?: number;
-  dailyCreditsUsed?: number;
-  subscriptionTier?: string;
-  purchasedModelIds?: string[];
-}
-
-interface AuthState {
-  user: User | null;
-  isAuthenticated: boolean;
-  loading: boolean;
-}
+import React, { useReducer, useEffect, type ReactNode } from 'react';
+import type { User } from '../types/auth';
+import { AuthContext, type AuthState } from './auth-context-type';
 
 type AuthAction =
   | { type: 'LOGIN'; payload: User }
@@ -54,13 +39,6 @@ const authReducer = (state: AuthState, action: AuthAction): AuthState => {
   }
 };
 
-interface AuthContextType extends AuthState {
-  login: (user: User, token: string, refreshToken?: string) => void;
-  logout: () => void;
-}
-
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
-
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [state, dispatch] = useReducer(authReducer, initialState);
 
@@ -75,7 +53,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             type: 'LOGIN',
             payload: user,
           });
-        } catch (e) {
+        } catch {
           dispatch({ type: 'SET_LOADING', payload: false });
         }
       } else {
@@ -96,8 +74,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     try {
       const { logoutApi } = await import('../api/auth');
       await logoutApi();
-    } catch (e) {
-      console.error('Logout failed:', e);
+    } catch (err) {
+      console.error('Logout failed:', err);
     } finally {
       localStorage.removeItem('access_token');
       localStorage.removeItem('refresh_token');
@@ -111,12 +89,4 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       {children}
     </AuthContext.Provider>
   );
-};
-
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
 };

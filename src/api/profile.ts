@@ -1,4 +1,5 @@
 import axios from './axios';
+import type { User } from '../types/auth';
 
 export interface ProfileData {
   id?: number;
@@ -43,8 +44,19 @@ export interface ProfileData {
   eveningPublishTime?: string;
   useAiBestTime?: boolean;
   
-  user?: any;
+  user?: User;
+
+  // Brand Voice Training Layer
+  brandVoiceSamples?: string[];
+  brandVoiceImageUrls?: string[];
+  brandStyleDna?: string;
+  defaultVoiceMode?: 'DEFAULT' | 'STYLE_DNA' | 'FULL_CONTEXT';
 }
+
+export const generateStyleDna = async (): Promise<{ dna: string }> => {
+  const response = await axios.post<{ dna: string }>('/profile/generate-dna');
+  return response.data;
+};
 
 export interface ProfileResponse {
   profile: ProfileData;
@@ -59,6 +71,9 @@ export interface ProfileResponse {
     expiresAt?: string;
     storedImagesCount: number;
     maxStoredImages: number;
+    referralCode?: string;
+    bonusCredits: number;
+    dailyAdsViewed: number;
   };
 }
 

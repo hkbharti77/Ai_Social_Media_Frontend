@@ -10,6 +10,7 @@ export interface PricingTier {
   dailyLimit: number;
   features: string[];
   popular: boolean;
+  tierOrdinal: number;
 }
 
 export const getPricingTiersApi = async (): Promise<PricingTier[]> => {

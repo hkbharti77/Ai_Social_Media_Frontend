@@ -3,7 +3,7 @@ import PageWrapper from '../../components/layout/PageWrapper';
 import { Button } from '../../components/ui/Button';
 import { 
   Plus, 
-  Calendar,
+  Calendar as CalendarIcon,
   CheckCircle2,
   Clock,
   LayoutGrid,
@@ -40,8 +40,11 @@ import { listMediaApi } from '../../api/media';
 import { getProfile, type ProfileResponse } from '../../api/profile';
 import { ConfirmModal } from '../../components/ui/ConfirmModal';
 import AiUsageDashboard from '../../components/dashboard/UsageDashboard';
+import { useAuth } from '../../context/useAuth';
+import AdRewardCard from '../../components/dashboard/AdRewardCard';
 
 const DashboardPage: React.FC = () => {
+  const { user } = useAuth();
   const [posts, setPosts] = useState<Post[]>([]);
   const [stats, setStats] = useState<DashboardStats>({ draftCount: 0, scheduledCount: 0, publishedCount: 0, failedCount: 0 });
   const [accounts, setAccounts] = useState<SocialAccount[]>([]);
@@ -71,8 +74,8 @@ const DashboardPage: React.FC = () => {
     try {
       const data = await getBestTimeApi();
       setBestTime(data);
-    } catch (e) {
-      console.error("Failed to fetch best time insights", e);
+    } catch {
+      console.error("Failed to fetch best time insights");
     }
   };
 
@@ -81,7 +84,7 @@ const DashboardPage: React.FC = () => {
     try {
       await downloadMonthlyRoiReportApi();
       toast.success("ROI Report generated!");
-    } catch (e) {
+    } catch {
       toast.error("Failed to generate report.");
     } finally {
       setIsDownloadingReport(false);
@@ -111,11 +114,12 @@ const DashboardPage: React.FC = () => {
     }
   };
 
+  const safePosts = Array.isArray(posts) ? posts : [];
   const filteredPosts = activeTab === 'All'
-    ? posts
+    ? safePosts
     : activeTab === 'Evergreen'
-    ? posts.filter(post => post.isEvergreen)
-    : posts.filter(post => post.status === activeTab.toUpperCase());
+    ? safePosts.filter(post => post.isEvergreen)
+    : safePosts.filter(post => post.status === activeTab.toUpperCase());
 
   const tabs = ['All', 'Draft', 'Scheduled', 'Published', 'Evergreen', 'Failed'];
 
@@ -154,14 +158,14 @@ const DashboardPage: React.FC = () => {
       toast.success("Post removed from archive");
       fetchPosts();
       setIsDeleteModalOpen(false);
-    } catch (error) {
+    } catch {
       toast.error("Failed to delete post");
     } finally {
       setIsDeleting(false);
     }
   };
 
-  const handleSavePost = (_updatedPost: Post) => {
+  const handleSavePost = () => {
     fetchPosts();
     toast.success("Sync complete.", {
       icon: <CheckCircle2 size={16} className="text-emerald-500" />
@@ -173,7 +177,7 @@ const DashboardPage: React.FC = () => {
       await approveDraftApi(id);
       toast.success('Post approved & scheduled for IST slot.');
       fetchPosts();
-    } catch (error) {
+    } catch {
       toast.error('Failed to approve post.');
     }
   };
@@ -190,8 +194,9 @@ const DashboardPage: React.FC = () => {
         toast.success('🌿 Added to Evergreen Queue!');
       }
       fetchPosts();
-    } catch (e: any) {
-      if (e?.response?.status === 400) {
+    } catch (e) {
+      const err = e as { response?: { status?: number } };
+      if (err?.response?.status === 400) {
         toast.error('Only published posts can be marked Evergreen.');
       } else {
         toast.error('Failed to update Evergreen status.');
@@ -274,6 +279,15 @@ const DashboardPage: React.FC = () => {
           </motion.div>
         )}
 
+        {/* Growth & Rewards Section */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <AdRewardCard 
+             dailyAdsViewed={subscription?.dailyAdsViewed ?? 0} 
+             onRewardClaimed={fetchPosts} 
+             isSuperPro={subscription?.tier === 'SUPER_PRO'} 
+           />
+        </div>
+
         {!isLoading && accounts.length === 0 && (
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
@@ -302,11 +316,11 @@ const DashboardPage: React.FC = () => {
         {/* Dynamic Stats Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
           {[
-            { label: 'Pending Drafts', value: stats.draftCount, icon: Clock, color: 'text-blue-400' },
-            { label: 'Queued Posts', value: stats.scheduledCount, icon: Calendar, color: 'text-amber-400' },
-            { label: 'Viral Hits', value: stats.publishedCount, icon: TrendingUp, color: 'text-emerald-400' },
-            { label: 'AI Credits', value: subscription?.monthlyCredits?.toFixed(2) || '0.00', icon: Sparkles, color: 'text-primary' },
-          ].map((stat) => (
+            { label: 'Pending Drafts', value: stats?.draftCount ?? 0, icon: Clock, color: 'text-blue-400' },
+            { label: 'Queued Posts', value: stats?.scheduledCount ?? 0, icon: CalendarIcon, color: 'text-amber-400' },
+            { label: 'Viral Hits', value: stats?.publishedCount ?? 0, icon: TrendingUp, color: 'text-emerald-400' },
+            { label: 'Bonus Credits', value: subscription?.bonusCredits?.toFixed(1) || '0.0', icon: Sparkles, color: 'text-indigo-400' },
+          ].filter((s): s is NonNullable<typeof s> => s !== null).map((stat) => (
             <div key={stat.label} className="bg-card/40 backdrop-blur-xl border-2 border-white/5 p-8 rounded-[2.5rem] space-y-4 hover:border-primary/30 transition-all group shadow-2xl relative overflow-hidden">
               <div className="flex justify-between items-start">
                 <div className={cn("p-4 rounded-2xl bg-secondary/30 border border-white/5", stat.color)}>
@@ -322,13 +336,15 @@ const DashboardPage: React.FC = () => {
           ))}
         </div>
 
-        {/* AI Usage Intelligence Dashboard */}
-        <div className="grid grid-cols-1 gap-8">
-          <AiUsageDashboard />
-        </div>
+        {/* AI Usage Intelligence Dashboard - OWNER ONLY */}
+        {user?.email === 'hkbharti77@gmail.com' && (
+          <div className="grid grid-cols-1 gap-8">
+            <AiUsageDashboard />
+          </div>
+        )}
         
         {/* Connected Channels Summary */}
-        {accounts.length > 0 && (
+        {Array.isArray(accounts) && accounts.length > 0 && (
           <div className="space-y-6">
             <div className="flex items-center justify-between px-2">
               <h3 className="text-xl font-black tracking-tight uppercase tracking-[0.2em] text-muted-foreground/60 flex items-center gap-3">
@@ -388,30 +404,33 @@ const DashboardPage: React.FC = () => {
 
         {/* Content Explorer Section */}
         <div className="space-y-10">
-          <div className="flex gap-10 border-b-2 border-white/5 pb-px overflow-x-auto scrollbar-hide">
-            {tabs.map((tab) => (
-              <button
-                key={tab}
-                onClick={() => setActiveTab(tab)}
-                className={cn(
-                  "pb-8 px-2 text-xs font-black uppercase tracking-[0.3em] transition-all relative whitespace-nowrap",
-                  activeTab === tab ? "text-primary scale-110" : "text-muted-foreground/60 hover:text-foreground"
-                )}
-              >
-                {tab}
-                {activeTab === tab && (
-                  <motion.div 
-                    layoutId="activeTabDashboardGlow"
-                    className="absolute bottom-0 left-0 right-0 h-1.5 bg-primary rounded-t-full shadow-[0_-8px_20px_rgba(var(--primary),0.6)]" 
-                  />
-                )}
-              </button>
-            ))}
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 border-b-2 border-white/5 pb-8">
+            <div className="flex gap-10 overflow-x-auto scrollbar-hide">
+              {tabs.map((tab) => (
+                <button
+                  key={tab}
+                  onClick={() => setActiveTab(tab)}
+                  className={cn(
+                    "pb-1 px-2 text-xs font-black uppercase tracking-[0.3em] transition-all relative whitespace-nowrap",
+                    activeTab === tab ? "text-primary scale-110" : "text-muted-foreground/60 hover:text-foreground"
+                  )}
+                >
+                  {tab}
+                  {activeTab === tab && (
+                    <motion.div 
+                      layoutId="activeTabDashboardGlow"
+                      className="absolute -bottom-[34px] left-0 right-0 h-1.5 bg-primary rounded-t-full shadow-[0_-8px_20px_rgba(var(--primary),0.6)]" 
+                    />
+                  )}
+                </button>
+              ))}
+            </div>
           </div>
 
           <AnimatePresence mode="wait">
             {isLoading ? (
                <motion.div 
+                key="loading"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
@@ -423,6 +442,7 @@ const DashboardPage: React.FC = () => {
               </motion.div>
             ) : (
               <motion.div 
+                key="grid"
                 layout
                 className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10"
               >
@@ -473,7 +493,7 @@ const DashboardPage: React.FC = () => {
                     <p className="text-muted-foreground font-medium opacity-60">Unposted media in your vault</p>
                   </div>
                   <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6">
-                    {recentMedia.map((asset, idx) => (
+                    {Array.isArray(recentMedia) && recentMedia.map((asset, idx) => (
                       <motion.div 
                         key={idx}
                         whileHover={{ y: -10, scale: 1.05 }}

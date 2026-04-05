@@ -25,22 +25,21 @@ const MicrositePage: React.FC = () => {
   const [newLink, setNewLink] = useState({ title: '', url: '', icon: 'Link' });
 
   useEffect(() => {
-    fetchData();
-  }, []);
-
-  const fetchData = async () => {
-    try {
-      const resp = await getProfile();
-      const slug = resp.profile.brandSlug || 'my-brand';
-      setBrandSlug(slug);
-      if (resp.profile.brandSlug) {
-        const data = await getMicrositeLinksApi(resp.profile.brandSlug);
-        setLinks(data);
+    const fetchInitialData = async () => {
+      try {
+        const resp = await getProfile();
+        const slug = resp.profile.brandSlug || 'my-brand';
+        setBrandSlug(slug);
+        if (resp.profile.brandSlug) {
+          const data = await getMicrositeLinksApi(resp.profile.brandSlug);
+          setLinks(data);
+        }
+      } catch {
+        toast.error("Failed to load microsite data.");
       }
-    } catch (e) {
-      toast.error("Failed to load microsite data.");
-    }
-  };
+    };
+    fetchInitialData();
+  }, []);
 
   const handleAddLink = async () => {
     if (!newLink.title || !newLink.url) return;
@@ -50,7 +49,7 @@ const MicrositePage: React.FC = () => {
       setNewLink({ title: '', url: '', icon: 'Link' });
       setIsAdding(false);
       toast.success("Link added to Microsite!");
-    } catch (e) {
+    } catch {
       toast.error("Failed to add link.");
     }
   };
@@ -60,7 +59,7 @@ const MicrositePage: React.FC = () => {
       await deleteMicrositeLinkApi(id);
       setLinks(links.filter(l => l.id !== id));
       toast.error("Link removed.");
-    } catch (e) {
+    } catch {
       toast.error("Failed to delete link.");
     }
   };

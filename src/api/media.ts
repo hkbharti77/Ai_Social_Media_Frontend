@@ -22,7 +22,7 @@ export const uploadMediaApi = async (file: File): Promise<MediaUploadResponse> =
 /** List all media objects stored in S3 */
 export const listMediaApi = async (): Promise<{url: string, downloadUrl: string}[]> => {
   const response = await axiosInstance.get<{url: string, downloadUrl: string}[]>('/media/all');
-  return response.data;
+  return Array.isArray(response.data) ? response.data : [];
 };
 
 /** Delete a media file by its URL or key */

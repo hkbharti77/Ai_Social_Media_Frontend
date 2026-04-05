@@ -28,7 +28,7 @@ export const getXConnectUrl = async (state: string): Promise<string> => {
 
 export const getSocialAccounts = async (): Promise<SocialAccount[]> => {
   const response = await axiosInstance.get<SocialAccount[]>('/social/accounts');
-  return response.data;
+  return Array.isArray(response.data) ? response.data : [];
 };
 
 export const disconnectSocialAccount = async (id: number): Promise<void> => {

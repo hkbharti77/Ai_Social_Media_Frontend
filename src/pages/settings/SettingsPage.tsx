@@ -16,11 +16,12 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '../../context/useAuth';
 import { getProfile, type ProfileResponse } from '../../api/profile';
 import { getPaymentHistory, getUsageHistory, downloadReceiptPdf, type PaymentOrder, type CreditUsage } from '../../api/usage';
 import { useNavigate } from 'react-router-dom';
-import { History, FileText, Download, Zap } from 'lucide-react';
+import { History, FileText, Download, Zap, Heart } from 'lucide-react';
+import ReferralCard from '../../components/dashboard/ReferralCard';
 
 const SettingsPage: React.FC = () => {
   const { user } = useAuth();
@@ -29,10 +30,6 @@ const SettingsPage: React.FC = () => {
   const [subscription, setSubscription] = useState<ProfileResponse['subscription'] | null>(null);
   const [payments, setPayments] = useState<PaymentOrder[]>([]);
   const [usage, setUsage] = useState<CreditUsage[]>([]);
-
-  React.useEffect(() => {
-    fetchData();
-  }, []);
 
   const fetchData = async () => {
     try {
@@ -50,10 +47,15 @@ const SettingsPage: React.FC = () => {
     }
   };
 
+  React.useEffect(() => {
+    fetchData();
+  }, []);
+
   const sections = [
     { id: 'account', title: 'Account Settings', desc: 'Secure and personalize your profile.', icon: User, color: 'text-blue-400' },
-    { id: 'billing', title: 'Subscription & Billing', desc: 'Manage your enterprise plan and invoices.', icon: CreditCard, color: 'text-emerald-400' },
-    { id: 'usage', title: 'Usage Activity', desc: 'Real-time ledger of your AI credit consumption.', icon: History, color: 'text-orange-400' },
+      { id: 'billing', title: 'Subscription & Billing', desc: 'Enterprise plan and invoices.', icon: CreditCard, color: 'text-emerald-400' },
+      { id: 'referral', title: 'Refer & Earn', desc: 'Secure 50 bonus credits for every verified pioneer.', icon: Heart, color: 'text-rose-400' },
+      { id: 'usage', title: 'Usage Activity', desc: 'Real-time ledger of AI credit consumption.', icon: History, color: 'text-orange-400' },
     { id: 'notifications', title: 'Alert Preferences', desc: 'Customize your real-time notification lab.', icon: Bell, color: 'text-amber-400' },
     { id: 'api', title: 'API & Integrations', desc: 'Connect to external neural networks.', icon: ShieldCheck, color: 'text-purple-400' },
   ];
@@ -152,6 +154,25 @@ const SettingsPage: React.FC = () => {
                 )}
               </div>
             </div>
+          </div>
+        );
+      case 'referral':
+        return (
+          <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
+             <div className="bg-rose-500/5 border-2 border-rose-500/10 p-8 rounded-[2rem] mb-8 relative overflow-hidden group">
+               <div className="absolute -right-4 -top-4 opacity-5 group-hover:opacity-10 transition-opacity rotate-12">
+                 <Heart size={120} className="text-rose-400" />
+               </div>
+               <h3 className="text-xl font-bold mb-2 flex items-center gap-2 relative z-10 text-rose-400">
+                 <Heart size={20} fill="currentColor" />
+                 The Pioneer Program
+               </h3>
+               <p className="text-muted-foreground relative z-10 leading-relaxed font-medium">
+                 Expand our collective neural network. When a new user joins via your unique frequency and verifies their identity, 
+                 your account is rewarded with <span className="text-rose-400 font-black">50 credits</span> immediately. No limits.
+               </p>
+             </div>
+             <ReferralCard referralCode={subscription?.referralCode} />
           </div>
         );
       case 'usage':

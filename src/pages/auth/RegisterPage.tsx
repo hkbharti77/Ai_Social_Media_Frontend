@@ -1,12 +1,13 @@
-import React from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Button } from '../../components/ui/Button';
 import { motion } from 'framer-motion';
-import { Mail, Lock, User, Sparkles, ArrowRight, Loader2, Shield } from 'lucide-react';
+import { Mail, Lock, User, Sparkles, ArrowRight, Loader2, Shield, CheckCircle2 } from 'lucide-react';
 import { registerApi } from '../../api/auth';
+import { toast } from 'sonner';
 
 const registerSchema = z.object({
   fullName: z.string().min(2, { message: "Name must be at least 2 characters" }),
@@ -14,6 +15,7 @@ const registerSchema = z.object({
   password: z.string().min(6, { message: "Password must be at least 6 characters" }),
   confirmPassword: z.string().min(6, { message: "Confirm password must be at least 6 characters" }),
   role: z.string().optional(),
+  referralCode: z.string().optional(),
 }).refine((data) => data.password === data.confirmPassword, {
   message: "Passwords don't match",
   path: ["confirmPassword"],
@@ -21,14 +23,37 @@ const registerSchema = z.object({
 
 type RegisterFormValues = z.infer<typeof registerSchema>;
 
+const generateFingerprint = () => {
+  const parts = [
+    navigator.userAgent,
+    navigator.language,
+    screen.colorDepth.toString(),
+    screen.width.toString(),
+    screen.height.toString(),
+    new Date().getTimezoneOffset().toString()
+  ];
+  return btoa(parts.join('|')).slice(0, 32);
+};
+
 const RegisterPage: React.FC = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [error, setError] = React.useState<string | null>(null);
   const [isLoading, setIsLoading] = React.useState(false);
 
-  const { register, handleSubmit, formState: { errors } } = useForm<RegisterFormValues>({
+  const { register, handleSubmit, formState: { errors }, setValue } = useForm<RegisterFormValues>({
     resolver: zodResolver(registerSchema),
   });
+
+  useEffect(() => {
+    const refCode = searchParams.get('ref');
+    if (refCode) {
+      setValue('referralCode', refCode);
+      toast.success(`Referral code "${refCode}" detected!`, {
+        icon: <CheckCircle2 size={16} className="text-emerald-500" />
+      });
+    }
+  }, [searchParams, setValue]);
 
   const onSubmit = async (data: RegisterFormValues) => {
     try {
@@ -38,11 +63,14 @@ const RegisterPage: React.FC = () => {
         fullName: data.fullName,
         email: data.email,
         password: data.password,
-        roles: data.role ? [data.role] : []
+        roles: data.role ? [data.role] : [],
+        referralCode: data.referralCode,
+        deviceFingerprint: generateFingerprint()
       });
       navigate('/login');
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Registration failed. Please try again.');
+    } catch (err) {
+      const errorResponse = err as { response?: { data?: { message?: string } } };
+      setError(errorResponse.response?.data?.message || 'Registration failed. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -129,6 +157,18 @@ const RegisterPage: React.FC = () => {
                 />
               </div>
               {errors.confirmPassword && <p className="mt-2 text-xs font-bold text-rose-500 px-1">{errors.confirmPassword.message}</p>}
+            </div>
+            <div className="space-y-2">
+              <label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground px-1">Referral Code (Optional)</label>
+              <div className="relative group">
+                <Sparkles className="absolute left-5 top-1/2 -translate-y-1/2 text-muted-foreground group-focus-within:text-primary transition-colors" size={20} />
+                <input
+                  {...register('referralCode')}
+                  type="text"
+                  className="w-full pl-14 pr-6 py-4 bg-secondary/30 border-2 border-white/5 rounded-2xl focus:border-primary/50 focus:outline-none focus:ring-4 focus:ring-primary/5 transition-all text-lg font-medium"
+                  placeholder="FRIEND_CODE"
+                />
+              </div>
             </div>
             <div className="space-y-2">
               <label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground px-1">Account Role</label>

@@ -8,8 +8,10 @@ export interface LoginRequest {
 export interface SignupRequest {
   fullName: string;
   email: string;
-  password?: string;
+  password: string;
   roles?: string[];
+  referralCode?: string;
+  deviceFingerprint?: string;
 }
 
 export interface MessageResponse {

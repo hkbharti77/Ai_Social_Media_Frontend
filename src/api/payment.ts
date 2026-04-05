@@ -10,8 +10,8 @@ interface CreateOrderResponse {
     message?: string;
 }
 
-export const createRazorpayOrder = async (tier: string, amount: number): Promise<CreateOrderResponse> => {
-    const response = await axios.post<CreateOrderResponse>('/payments/create-order', { tier, amount });
+export const createRazorpayOrder = async (tier: string): Promise<CreateOrderResponse> => {
+    const response = await axios.post<CreateOrderResponse>('/payments/create-order', { tier });
     return response.data;
 };
 
@@ -25,5 +25,18 @@ export const verifyRazorpayPayment = async (
         razorpay_payment_id,
         razorpay_signature
     });
+    return response.data;
+};
+
+export interface UpgradePreviewResponse {
+    targetTier: string;
+    originalPrice: number;
+    proRatedPrice: number;
+    discountApplied: number;
+    currency: string;
+}
+
+export const getUpgradePreview = async (tier: string): Promise<UpgradePreviewResponse> => {
+    const response = await axios.get<UpgradePreviewResponse>(`/payments/preview-upgrade/${tier}`);
     return response.data;
 };

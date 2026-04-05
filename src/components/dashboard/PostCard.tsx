@@ -15,7 +15,9 @@ import {
   TrendingUp,
   RefreshCw,
   AlertCircle,
-  Layers
+  Layers,
+  Smartphone,
+  PieChart
 } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { cn } from '../../lib/utils';
@@ -51,11 +53,20 @@ const PostCard: React.FC<PostCardProps> = ({
   const carouselData = React.useMemo(() => {
     if (!post.isCarousel || !post.carouselContent) return null;
     try {
-      return JSON.parse(post.carouselContent) as { slides: any[] };
-    } catch (e) {
+      return JSON.parse(post.carouselContent) as { slides: { imageUrl?: string; caption?: string; [key: string]: unknown }[] };
+    } catch {
       return null;
     }
   }, [post.isCarousel, post.carouselContent]);
+
+  const pollData = React.useMemo(() => {
+    if (!post.isPoll || !post.pollContent) return null;
+    try {
+      return JSON.parse(post.pollContent) as { question: string; options: { text: string; [key: string]: unknown }[] };
+    } catch {
+      return null;
+    }
+  }, [post.isPoll, post.pollContent]);
 
   const getSlotBadge = () => {
     if (!post.slotType) return null;
@@ -94,15 +105,58 @@ const PostCard: React.FC<PostCardProps> = ({
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center bg-primary/5">
-            {isEvergreenMode
-              ? <Leaf className="text-emerald-400/30" size={48} />
-              : <Sparkles size={48} className="text-primary/20" />
-            }
+            {isEvergreenMode ? (
+              <Leaf className="text-emerald-400/30" size={48} />
+            ) : post.isPoll && pollData ? (
+              <div className="w-full h-full p-8 flex flex-col items-center justify-center space-y-6 bg-gradient-to-br from-primary/5 to-purple-500/5">
+                <PieChart size={48} className="text-primary/20" />
+                <div className="w-full space-y-2">
+                  {pollData.options.slice(0, 3).map((opt, i) => (
+                    <div key={i} className="h-8 bg-white/5 border border-white/10 rounded-lg flex items-center px-3">
+                      <span className="text-[9px] font-bold text-muted-foreground/60">{opt.text}</span>
+                    </div>
+                  ))}
+                  {pollData.options.length > 3 && <div className="text-center text-[8px] font-black text-muted-foreground/40">+{pollData.options.length - 3} MORE</div>}
+                </div>
+              </div>
+            ) : (
+              <Sparkles size={48} className="text-primary/20" />
+            )}
+          </div>
+        )}
+
+        {/* Story Indicator */}
+        {post.isStory && (
+          <div className={cn(
+            "absolute flex items-center gap-2 z-20",
+            post.slotType ? "top-20 left-6" : "top-6 left-6"
+          )}>
+            <div className="bg-rose-500/80 backdrop-blur-md px-4 py-2 rounded-xl border border-white/10 shadow-2xl flex items-center gap-2.5">
+              <Smartphone size={14} className="text-white animate-pulse" />
+              <span className="text-[10px] font-black uppercase tracking-[0.15em] text-white">
+                Story
+              </span>
+            </div>
+          </div>
+        )}
+
+        {/* Poll Indicator */}
+        {post.isPoll && (
+          <div className={cn(
+            "absolute flex items-center gap-2 z-20",
+            post.slotType ? "top-20 left-6" : "top-6 left-6"
+          )}>
+            <div className="bg-primary/80 backdrop-blur-md px-4 py-2 rounded-xl border border-white/10 shadow-2xl flex items-center gap-2.5">
+              <PieChart size={14} className="text-white animate-pulse" />
+              <span className="text-[10px] font-black uppercase tracking-[0.15em] text-white">
+                Poll
+              </span>
+            </div>
           </div>
         )}
 
         {/* Carousel Indicator */}
-        {post.isCarousel && carouselData && (
+        {post.isCarousel && carouselData && !post.isStory && !post.isPoll && (
           <div className={cn(
             "absolute flex items-center gap-2 z-20",
             post.slotType ? "top-20 left-6" : "top-6 left-6"

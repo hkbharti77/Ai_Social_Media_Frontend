@@ -10,28 +10,55 @@ import {
   Menu,
   X,
   Sparkles,
-  Image as ImageIcon,
-  Leaf
+  ImageIcon,
+  Leaf,
+  Globe,
+  ShieldCheck,
+  SearchCode,
+  Users,
+  Calendar,
+  Zap,
+  ArrowRight
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '../../lib/utils';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '../../context/useAuth';
+import { getProfile, type ProfileResponse } from '../../api/profile';
 
 const navItems = [
   { icon: LayoutDashboard, label: 'Dashboard', href: '/dashboard' },
+  { icon: Calendar, label: 'Calendar', href: '/calendar' },
   { icon: PlusCircle, label: 'Generate', href: '/generate' },
   { icon: Sparkles, label: 'AI Butler', href: '/reviews' },
+  { icon: Globe, label: 'Community', href: '/community' },
   { icon: Leaf, label: 'Evergreen', href: '/evergreen' },
   { icon: LinkIcon, label: 'Microsite', href: '/microsite' },
   { icon: LinkIcon, label: 'Connect', href: '/connect' },
   { icon: ImageIcon, label: 'AI Media', href: '/media' },
+  { icon: Sparkles, label: 'Brand Voice', href: '/profile/brand-voice' },
   { icon: UserCircle, label: 'Profile', href: '/profile/setup' },
   { icon: Settings, label: 'Settings', href: '/settings' },
 ];
 
+import { UpgradeModal } from './UpgradeModal';
+
 const Sidebar: React.FC = () => {
-  const { logout } = useAuth();
+  const { logout, user } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
+  const [subscription, setSubscription] = useState<ProfileResponse['subscription'] | null>(null);
+  const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
+
+  React.useEffect(() => {
+    const fetchSub = async () => {
+      try {
+        const data = await getProfile();
+        setSubscription(data.subscription);
+      } catch (e) {
+        console.error('Failed to sync sidebar credits', e);
+      }
+    };
+    fetchSub();
+  }, []);
 
   const toggleSidebar = () => setIsOpen(!isOpen);
 
@@ -42,9 +69,59 @@ const Sidebar: React.FC = () => {
           <div className="w-12 h-12 bg-gradient-to-br from-primary to-blue-600 rounded-2xl flex items-center justify-center text-white font-black shadow-lg shadow-primary/20 shrink-0">
             <Sparkles size={24} />
           </div>
-          <span className="mt-1">VaniAI</span>
         </h1>
 
+        {user?.email === 'hkbharti77@gmail.com' && (
+          <div className="space-y-4">
+            <h2 className="text-[10px] font-black text-rose-500 uppercase tracking-widest px-5 flex items-center gap-2">
+              <ShieldCheck size={12} /> Owner Control
+            </h2>
+            <div className="space-y-2 px-2">
+              <NavLink
+                to="/admin/dashboard"
+                className={({ isActive }) =>
+                  cn(
+                    "flex items-center gap-4 px-5 py-4 rounded-2xl transition-all duration-300 font-black uppercase tracking-widest text-[10px]",
+                    isActive 
+                      ? "bg-rose-500 text-white shadow-xl shadow-rose-500/20 scale-[1.02]" 
+                      : "text-muted-foreground hover:bg-white/5 hover:text-foreground hover:translate-x-1"
+                  )
+                }
+              >
+                <LayoutDashboard size={20} />
+                <span>Intelligence</span>
+              </NavLink>
+              <NavLink
+                to="/admin/audit"
+                className={({ isActive }) =>
+                  cn(
+                    "flex items-center gap-4 px-5 py-4 rounded-2xl transition-all duration-300 font-black uppercase tracking-widest text-[10px]",
+                    isActive 
+                      ? "bg-rose-500 text-white shadow-xl shadow-rose-500/20 scale-[1.02]" 
+                      : "text-muted-foreground hover:bg-white/5 hover:text-foreground hover:translate-x-1"
+                  )
+                }
+              >
+                <SearchCode size={20} />
+                <span>Token Audit</span>
+              </NavLink>
+              <NavLink
+                to="/admin/users"
+                className={({ isActive }) =>
+                  cn(
+                    "flex items-center gap-4 px-5 py-4 rounded-2xl transition-all duration-300 font-black uppercase tracking-widest text-[10px]",
+                    isActive 
+                      ? "bg-rose-500 text-white shadow-xl shadow-rose-500/20 scale-[1.02]" 
+                      : "text-muted-foreground hover:bg-white/5 hover:text-foreground hover:translate-x-1"
+                  )
+                }
+              >
+                <Users size={20} />
+                <span>User Directory</span>
+              </NavLink>
+            </div>
+          </div>
+        )}
       </div>
       
       <nav className="flex-1 px-4 space-y-3">
@@ -67,6 +144,48 @@ const Sidebar: React.FC = () => {
           </NavLink>
         ))}
       </nav>
+
+      {/* Credit Balance Card */}
+      <div className="px-6 py-8">
+        <div className="bg-gradient-to-br from-secondary/50 to-background/50 border border-white/5 rounded-[2rem] p-6 space-y-4 shadow-2xl relative overflow-hidden group">
+          <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
+            <Sparkles size={60} className="text-primary" />
+          </div>
+          
+          <div className="space-y-1">
+            <div className="text-[10px] font-black text-muted-foreground uppercase tracking-widest flex items-center gap-2">
+              <Zap size={12} className="text-primary" /> Cloud Intelligence
+            </div>
+            <div className="flex items-baseline gap-1">
+              <span className="text-3xl font-black text-foreground">
+                {subscription?.monthlyCredits?.toLocaleString() ?? '0'}
+              </span>
+              <span className="text-[10px] font-black text-muted-foreground uppercase opacity-50">
+                / {subscription?.tier === 'FREE' ? '10' : (subscription?.tier === 'STANDARD' ? '100' : (subscription?.tier === 'PRO' ? '1,000' : '20,000'))} Credits
+              </span>
+            </div>
+          </div>
+
+          <div className="h-px bg-white/5" />
+
+          <div className="flex items-center justify-between">
+            <span className={cn(
+              "text-[8px] font-black uppercase tracking-widest px-3 py-1 rounded-full border",
+              subscription?.tier === 'FREE' ? "border-white/10 text-muted-foreground" : "border-primary/20 text-primary bg-primary/5"
+            )}>
+              {subscription?.tier?.replace('_', ' ') ?? 'FREE'} PLAN
+            </span>
+            {(!subscription?.tier || subscription?.tier === 'FREE' || subscription?.tier === 'STANDARD') && (
+              <button 
+                onClick={() => setIsUpgradeModalOpen(true)}
+                className="text-primary text-[8px] font-black uppercase tracking-widest hover:underline flex items-center gap-1"
+              >
+                Upgrade <ArrowRight size={10} />
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
 
       <div className="p-6 border-t border-white/5">
         <button
@@ -120,6 +239,11 @@ const Sidebar: React.FC = () => {
           </div>
         )}
       </AnimatePresence>
+      <UpgradeModal 
+        isOpen={isUpgradeModalOpen} 
+        onClose={() => setIsUpgradeModalOpen(false)} 
+        currentTierOrdinal={subscription?.tierOrdinal}
+      />
     </>
   );
 };

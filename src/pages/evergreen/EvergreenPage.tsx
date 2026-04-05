@@ -40,7 +40,7 @@ const EvergreenPage: React.FC = () => {
     try {
       const data = await getEvergreenPostsApi();
       setPosts(data);
-    } catch (e) {
+    } catch {
       toast.error('Failed to load evergreen queue.');
     } finally {
       setIsLoading(false);
@@ -53,7 +53,7 @@ const EvergreenPage: React.FC = () => {
       await unmarkEvergreenApi(id);
       toast.success('Post removed from Evergreen Queue.');
       setPosts(prev => prev.filter(p => p.id !== id));
-    } catch (e) {
+    } catch {
       toast.error('Failed to remove post.');
     } finally {
       setRemovingId(null);
@@ -70,7 +70,7 @@ const EvergreenPage: React.FC = () => {
       } else {
         toast.info(result.message);
       }
-    } catch (e) {
+    } catch {
       toast.error('Evergreen fill failed.');
     } finally {
       setFillingSlot(null);

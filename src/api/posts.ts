@@ -32,6 +32,12 @@ export interface Post {
   threadContent?: string;
   isCarousel?: boolean;
   carouselContent?: string;
+  isStory?: boolean;
+  isPoll?: boolean;
+  pollContent?: string;
+  isReel?: boolean;
+  videoScript?: string;
+  videoUrl?: string;
   // Evergreen Queue fields
   isEvergreen?: boolean;
   evergreenScore?: number;
@@ -40,12 +46,17 @@ export interface Post {
 
 export const getPostsApi = async (): Promise<Post[]> => {
   const response = await axiosInstance.get<Post[]>('/posts');
-  return response.data;
+  return Array.isArray(response.data) ? response.data : [];
 };
 
 export const getPostStatsApi = async (): Promise<DashboardStats> => {
   const response = await axiosInstance.get<DashboardStats>('/posts/stats');
-  return response.data;
+  return response.data || { 
+    draftCount: 0, 
+    scheduledCount: 0, 
+    publishedCount: 0, 
+    failedCount: 0 
+  };
 };
 
 export const createPostApi = async (post: Post): Promise<Post> => {
@@ -64,6 +75,13 @@ export const deletePostApi = async (id: number): Promise<void> => {
 
 export const schedulePostApi = async (id: number, scheduledAt: string): Promise<Post> => {
   const response = await axiosInstance.post<Post>(`/posts/${id}/schedule`, null, {
+    params: { scheduledAt }
+  });
+  return response.data;
+};
+
+export const recyclePostApi = async (id: number, scheduledAt: string): Promise<Post> => {
+  const response = await axiosInstance.post<Post>(`/posts/${id}/recycle`, null, {
     params: { scheduledAt }
   });
   return response.data;
@@ -90,7 +108,7 @@ export const generateDraftApi = async (slot: 'MORNING' | 'EVENING'): Promise<Pos
 
 export const getEvergreenPostsApi = async (): Promise<Post[]> => {
   const response = await axiosInstance.get<Post[]>('/posts/evergreen');
-  return response.data;
+  return Array.isArray(response.data) ? response.data : [];
 };
 
 export const markEvergreenApi = async (id: number): Promise<Post> => {

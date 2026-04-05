@@ -22,6 +22,7 @@ const PricingPage: React.FC = () => {
   const [tiers, setTiers] = React.useState<PricingTier[]>([]);
   const [subscription, setSubscription] = React.useState<ProfileResponse['subscription'] | null>(null);
   const [isLoading, setIsLoading] = React.useState(true);
+  const [previews, setPreviews] = React.useState<Record<string, any>>({});
 
   React.useEffect(() => {
     fetchPricingData();
@@ -36,8 +37,26 @@ const PricingPage: React.FC = () => {
       ]);
       setTiers(pricingData);
       setSubscription(profileData.subscription);
-    } catch (e) {
-      console.error('Failed to sync enterprise pricing', e);
+
+      // Fetch pro-rated previews for eligible upgrades
+      const currentOrdinal = profileData.subscription?.tierOrdinal ?? 0;
+      const upgradeTiers = pricingData.filter((_, idx) => idx > currentOrdinal);
+      
+      const previewPromises = upgradeTiers.map(t => 
+        import('../../api/payment').then(m => m.getUpgradePreview(t.name))
+          .then(p => ({ name: t.name, preview: p }))
+          .catch(() => null)
+      );
+      
+      const results = await Promise.all(previewPromises);
+      const previewMap: Record<string, any> = {};
+      results.forEach(res => {
+        if (res) previewMap[res.name] = res.preview;
+      });
+      setPreviews(previewMap);
+
+    } catch {
+      console.error('Failed to sync enterprise pricing');
       toast.error("Cloud pricing sync failed.");
     } finally {
       setIsLoading(false);
@@ -56,7 +75,7 @@ const PricingPage: React.FC = () => {
     
     try {
       // 1. Create Order
-      const order = await createRazorpayOrder(tier.name, tier.priceAmount);
+      const order = await createRazorpayOrder(tier.name);
       console.log('Order created:', order);
       
       // Handle Free tier directly if returned by backend
@@ -77,7 +96,7 @@ const PricingPage: React.FC = () => {
         name: "VaniAI",
         description: `Upgrade to ${tier.name} Plan`,
         order_id: order.order_id,
-        handler: async (response: any) => {
+        handler: async (response: { razorpay_order_id: string; razorpay_payment_id: string; razorpay_signature: string }) => {
           console.log('Payment Response:', response);
           const verifyingToast = toast.loading("Verifying payment...");
           try {
@@ -92,7 +111,7 @@ const PricingPage: React.FC = () => {
             });
             // Refresh data
             fetchPricingData();
-          } catch (error) {
+          } catch {
             toast.error("Payment verification failed", { id: verifyingToast });
           }
         },
@@ -110,8 +129,13 @@ const PricingPage: React.FC = () => {
         }
       };
 
-      const rzp = new (window as any).Razorpay(options);
-      rzp.on('payment.failed', function (response: any) {
+      interface RazorpayInstance {
+        open: () => void;
+        on: (event: string, callback: (response: { error: { description: string } }) => void) => void;
+      }
+
+      const rzp = new (window as unknown as { Razorpay: new (options: unknown) => RazorpayInstance }).Razorpay(options);
+      rzp.on('payment.failed', function (response: { error: { description: string } }) {
         toast.error("Payment Failed", {
           description: response.error.description
         });
@@ -119,8 +143,7 @@ const PricingPage: React.FC = () => {
       rzp.open();
       toast.dismiss(loadingToast);
       
-    } catch (error) {
-      console.error('Upgrade failed', error);
+    } catch {
       toast.error("Failed to initiate payment", { id: loadingToast });
     }
   };
@@ -173,70 +196,89 @@ const PricingPage: React.FC = () => {
               // Only show tiers higher than the current one
               return idx > currentOrdinal;
             })
-            .map((tier, idx) => (
-              <motion.div
-                key={tier.name}
-                initial={{ opacity: 0, y: 30 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.1 * idx }}
-                className={cn(
-                  "relative flex flex-col p-8 rounded-[3rem] border-2 transition-all duration-500 overflow-hidden group",
-                  tier.popular ? "border-primary/30 bg-primary/5 popular-card" : "border-white/5 bg-white/5",
-                  tier.popular && "bg-gradient-to-b from-primary/10 to-transparent shadow-2xl shadow-primary/10 scale-105 z-10"
-                )}
-              >
-                {tier.popular && (
-                  <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity">
-                    <Star size={140} className="text-primary" />
-                  </div>
-                )}
+            .map((tier, idx) => {
+              const preview = previews[tier.name];
+              const displayPrice = preview ? `₹${preview.proRatedPrice}` : tier.priceInr;
+              const hasDiscount = preview && preview.discountApplied > 0;
 
-                <div className="space-y-6 relative z-10">
-                  <div className="space-y-4">
-                    <div className="flex justify-between items-start">
-                      <h3 className={cn(
-                        "text-3xl font-black italic uppercase tracking-tight",
-                        tier.name === 'Standard' ? 'text-blue-400' : (tier.name === 'Pro' ? 'text-primary' : 'text-purple-400')
-                      )}>{tier.name}</h3>
-                      {tier.popular && (
-                        <div className="bg-primary text-primary-foreground text-[10px] font-black uppercase tracking-widest px-4 py-1.5 rounded-full shadow-lg">
-                          Recommended
+              return (
+                <motion.div
+                  key={tier.name}
+                  initial={{ opacity: 0, y: 30 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.1 * idx }}
+                  className={cn(
+                    "relative flex flex-col p-8 rounded-[3rem] border-2 transition-all duration-500 overflow-hidden group",
+                    tier.popular ? "border-primary/30 bg-primary/5 popular-card" : "border-white/5 bg-white/5",
+                    tier.popular && "bg-gradient-to-b from-primary/10 to-transparent shadow-2xl shadow-primary/10 scale-105 z-10"
+                  )}
+                >
+                  {tier.popular && (
+                    <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity">
+                      <Star size={140} className="text-primary" />
+                    </div>
+                  )}
+
+                  {hasDiscount && (
+                    <div className="absolute top-4 right-4 bg-green-500/20 text-green-400 text-[10px] font-black uppercase tracking-widest px-4 py-1.5 rounded-full border border-green-500/30">
+                      Save ₹{preview.discountApplied}
+                    </div>
+                  )}
+  
+                  <div className="space-y-6 relative z-10">
+                    <div className="space-y-4">
+                      <div className="flex justify-between items-start">
+                        <h3 className={cn(
+                          "text-3xl font-black italic uppercase tracking-tight",
+                          tier.name === 'Standard' ? 'text-blue-400' : (tier.name === 'Pro' ? 'text-primary' : 'text-purple-400')
+                        )}>{tier.name}</h3>
+                        {tier.popular && (
+                          <div className="bg-primary text-primary-foreground text-[10px] font-black uppercase tracking-widest px-4 py-1.5 rounded-full shadow-lg">
+                            Recommended
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex flex-col">
+                        {hasDiscount && (
+                          <span className="text-sm font-bold text-muted-foreground line-through opacity-50 mb-1">
+                            {tier.priceInr}
+                          </span>
+                        )}
+                        <div className="flex items-baseline gap-1">
+                          <span className="text-5xl font-black text-foreground">{displayPrice}</span>
+                          <span className="text-xs font-bold text-muted-foreground uppercase opacity-60">/month</span>
                         </div>
+                      </div>
+                      <p className="text-sm font-medium text-muted-foreground/80 leading-relaxed">{tier.description}</p>
+                    </div>
+  
+                    <div className="h-px bg-gradient-to-r from-border to-transparent" />
+  
+                    <ul className="space-y-4 flex-1">
+                      {tier.features.map((feature, fIdx) => (
+                        <li key={fIdx} className="flex items-center gap-3 text-xs font-bold uppercase tracking-widest text-foreground/90">
+                          <div className={cn("shrink-0 p-1 rounded-md", tier.popular ? "bg-primary/20 text-primary" : "bg-white/5 text-muted-foreground")}>
+                            <Check size={14} />
+                          </div>
+                          {feature}
+                        </li>
+                      ))}
+                    </ul>
+  
+                    <Button 
+                      onClick={() => handleUpgrade(tier)}
+                      className={cn(
+                        "w-full h-16 rounded-2xl font-black uppercase tracking-widest text-xs transition-all active:scale-95 shadow-xl",
+                        tier.popular ? "shadow-primary/20" : "shadow-black/20"
                       )}
-                    </div>
-                    <div className="flex items-baseline gap-1">
-                      <span className="text-5xl font-black text-foreground">{tier.priceInr}</span>
-                      <span className="text-xs font-bold text-muted-foreground uppercase opacity-60">/month</span>
-                    </div>
-                    <p className="text-sm font-medium text-muted-foreground/80 leading-relaxed">{tier.description}</p>
+                    >
+                      {hasDiscount ? "Upgrade for " + displayPrice : "Upgrade to " + tier.name}
+                      <ArrowRight size={16} className="ml-2" />
+                    </Button>
                   </div>
-
-                  <div className="h-px bg-gradient-to-r from-border to-transparent" />
-
-                  <ul className="space-y-4 flex-1">
-                    {tier.features.map((feature, fIdx) => (
-                      <li key={fIdx} className="flex items-center gap-3 text-xs font-bold uppercase tracking-widest text-foreground/90">
-                        <div className={cn("shrink-0 p-1 rounded-md", tier.popular ? "bg-primary/20 text-primary" : "bg-white/5 text-muted-foreground")}>
-                          <Check size={14} />
-                        </div>
-                        {feature}
-                      </li>
-                    ))}
-                  </ul>
-
-                  <Button 
-                    onClick={() => handleUpgrade(tier)}
-                    className={cn(
-                      "w-full h-16 rounded-2xl font-black uppercase tracking-widest text-xs transition-all active:scale-95 shadow-xl",
-                      tier.popular ? "shadow-primary/20" : "shadow-black/20"
-                    )}
-                  >
-                    Upgrade to {tier.name}
-                    <ArrowRight size={16} className="ml-2" />
-                  </Button>
-                </div>
-              </motion.div>
-            ))}
+                </motion.div>
+              );
+            })}
           
           {/* Fallback if no upgrades available */}
           {tiers.filter((_, idx) => idx > (subscription?.tierOrdinal ?? 0)).length === 0 && (

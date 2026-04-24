@@ -23,6 +23,18 @@ interface StrategyTabProps {
   isGenerating: boolean;
   setIsGenerating: (loading: boolean) => void;
   AI_MODELS: ModelOption[];
+
+  // Results Props (compatibility)
+  generatedPosts: GeneratedPost[];
+  generatedThreads: string[][];
+  viewMode: 'grid' | 'list';
+  onDraft: (post: GeneratedPost, index: number) => void;
+  onSchedule: (post: GeneratedPost, index: number) => void;
+  onDelete: (index: number) => void;
+  onPredict: (draft: string, index: number) => void;
+  onSaveThread: (thread: string[], status: any) => void;
+  processingId: string | null;
+  isPredicting: Record<number, boolean>;
 }
 
 const StrategyTab: React.FC<StrategyTabProps> = ({ 

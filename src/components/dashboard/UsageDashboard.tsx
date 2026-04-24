@@ -1,11 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Cpu, Zap, Activity, Info, BarChart3, Database } from 'lucide-react';
+import { Cpu, Zap, Activity, Info, BarChart3, Database, ChevronDown } from 'lucide-react';
 import { getAiUsageSummary, type AiUsageSummary } from '../../api/usage';
+import { cn } from '../../lib/utils';
 
 const AiUsageDashboard: React.FC = () => {
     const [summary, setSummary] = useState<AiUsageSummary[]>([]);
     const [loading, setLoading] = useState(true);
+    const [isExpanded, setIsExpanded] = useState(true);
 
     useEffect(() => {
         const fetchSummary = async () => {
@@ -64,10 +66,22 @@ const AiUsageDashboard: React.FC = () => {
                         <p className="text-sm text-white/50">Token consumption & model stats</p>
                     </div>
                 </div>
-                <div className="bg-white/5 border border-white/10 px-3 py-1 rounded-full text-xs text-white/70 flex items-center gap-2">
-                    <Zap className="w-3 h-3 text-yellow-400" />
-                    Real-time
-                </div>
+                <button 
+                    onClick={() => setIsExpanded(!isExpanded)}
+                    className={cn(
+                        "transition-all duration-300 border px-4 py-1.5 rounded-full text-xs flex items-center gap-2 group relative overflow-hidden",
+                        isExpanded 
+                            ? "bg-blue-500/10 border-blue-500/30 text-blue-400" 
+                            : "bg-white/5 border-white/10 text-white/40 hover:bg-white/10"
+                    )}
+                >
+                    <div className={cn(
+                        "w-1.5 h-1.5 rounded-full transition-all duration-500",
+                        isExpanded ? "bg-blue-400 shadow-[0_0_10px_rgba(59,130,246,0.8)]" : "bg-white/20"
+                    )} />
+                    <span className="font-bold tracking-tight">{isExpanded ? 'REAL-TIME' : 'SHOW DETAILS'}</span>
+                    <ChevronDown className={cn("w-3.5 h-3.5 transition-transform duration-500 ease-out", isExpanded && "rotate-180")} />
+                </button>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
@@ -101,61 +115,73 @@ const AiUsageDashboard: React.FC = () => {
                 </div>
             </div>
 
-            <div className="space-y-4">
-                <h5 className="text-sm font-medium text-white/60 mb-2 flex items-center gap-2">
-                    <BarChart3 className="w-4 h-4" /> Usage by Model
-                </h5>
-                <AnimatePresence>
-                    {summaryData.map((item, index) => (
-                        <motion.div 
-                            key={item.modelId}
-                            initial={{ opacity: 0, x: -20 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            transition={{ delay: index * 0.1 }}
-                            className="bg-white/5 border border-white/5 rounded-xl p-4 group hover:border-white/10 transition-all duration-300"
-                        >
-                            <div className="flex items-center justify-between mb-3">
-                                <div className="flex items-center gap-3">
-                                    <div className={`p-1.5 rounded-md border ${getModelColor(item.modelId)}`}>
-                                        <Database className="w-3.5 h-3.5" />
-                                    </div>
-                                    <span className="text-sm font-semibold text-white group-hover:text-blue-300 transition-colors">
-                                        {item.modelId.replace(/-/g, ' ').toUpperCase()}
-                                    </span>
-                                </div>
-                                <span className="text-xs text-white/40 font-mono">
-                                    {(item.totalTokens / 1000).toFixed(1)}k tokens
-                                </span>
-                            </div>
+            <AnimatePresence>
+                {isExpanded && (
+                    <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.5, ease: [0.04, 0.62, 0.23, 0.98] }}
+                        className="overflow-hidden"
+                    >
+                        <div className="space-y-4 pt-4 border-t border-white/5">
+                            <h5 className="text-sm font-medium text-white/60 mb-2 flex items-center gap-2">
+                                <BarChart3 className="w-4 h-4" /> Usage by Model
+                            </h5>
+                            <div className="space-y-4">
+                                {summaryData.map((item, index) => (
+                                    <motion.div 
+                                        key={item.modelId}
+                                        initial={{ opacity: 0, x: -20 }}
+                                        animate={{ opacity: 1, x: 0 }}
+                                        transition={{ delay: index * 0.1 }}
+                                        className="bg-white/5 border border-white/5 rounded-xl p-4 group hover:border-white/10 transition-all duration-300"
+                                    >
+                                        <div className="flex items-center justify-between mb-3">
+                                            <div className="flex items-center gap-3">
+                                                <div className={`p-1.5 rounded-md border ${getModelColor(item.modelId)}`}>
+                                                    <Database className="w-3.5 h-3.5" />
+                                                </div>
+                                                <span className="text-sm font-semibold text-white group-hover:text-blue-300 transition-colors">
+                                                    {item.modelId.replace(/-/g, ' ').toUpperCase()}
+                                                </span>
+                                            </div>
+                                            <span className="text-xs text-white/40 font-mono">
+                                                {(item.totalTokens / 1000).toFixed(1)}k tokens
+                                            </span>
+                                        </div>
 
-                            <div className="space-y-2">
-                                <div className="flex justify-between text-[10px] text-white/30 uppercase">
-                                    <span>Input: {item.promptTokens}</span>
-                                    <span>Output: {item.completionTokens}</span>
-                                </div>
-                                <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden flex">
-                                    <div 
-                                        className="h-full bg-blue-500/80 hover:bg-blue-400 transition-colors" 
-                                        style={{ width: `${(item.promptTokens / (item.totalTokens || 1)) * 100}%` }} 
-                                    />
-                                    <div 
-                                        className="h-full bg-purple-500/80 hover:bg-purple-400 transition-colors" 
-                                        style={{ width: `${(item.completionTokens / (item.totalTokens || 1)) * 100}%` }} 
-                                    />
-                                </div>
+                                        <div className="space-y-2">
+                                            <div className="flex justify-between text-[10px] text-white/30 uppercase">
+                                                <span>Input: {item.promptTokens}</span>
+                                                <span>Output: {item.completionTokens}</span>
+                                            </div>
+                                            <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden flex">
+                                                <div 
+                                                    className="h-full bg-blue-500/80 hover:bg-blue-400 transition-colors" 
+                                                    style={{ width: `${(item.promptTokens / (item.totalTokens || 1)) * 100}%` }} 
+                                                />
+                                                <div 
+                                                    className="h-full bg-purple-500/80 hover:bg-purple-400 transition-colors" 
+                                                    style={{ width: `${(item.completionTokens / (item.totalTokens || 1)) * 100}%` }} 
+                                                />
+                                            </div>
+                                        </div>
+                                    </motion.div>
+                                ))}
                             </div>
-                        </motion.div>
-                    ))}
-                </AnimatePresence>
-            </div>
+                        </div>
 
-            <div className="mt-6 pt-6 border-t border-white/5 flex items-start gap-3">
-                <Info className="w-4 h-4 text-white/30 shrink-0 mt-0.5" />
-                <p className="text-[11px] text-white/30 leading-relaxed">
-                    Tokens are calculated based on the actual context window used by the AI model. 
-                    Image generation models are tracked by API request volume.
-                </p>
-            </div>
+                        <div className="mt-6 pt-6 border-t border-white/5 flex items-start gap-3">
+                            <Info className="w-4 h-4 text-white/30 shrink-0 mt-0.5" />
+                            <p className="text-[11px] text-white/30 leading-relaxed">
+                                Tokens are calculated based on the actual context window used by the AI model. 
+                                Image generation models are tracked by API request volume.
+                            </p>
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </motion.div>
     );
 };

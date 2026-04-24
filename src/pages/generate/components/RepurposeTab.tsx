@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link2, Loader2, Sparkles, RefreshCcw } from 'lucide-react';
+import { Link2, Loader2, Sparkles, RefreshCcw, Trash2, Calendar, Save, BarChart3 } from 'lucide-react';
 import { Button } from '../../../components/ui/Button';
 import { repurposeUrlApi, type GeneratedPost } from '../../../api/ai';
 import { toast } from 'sonner';
@@ -7,6 +7,7 @@ import { handleApiError } from '../../../lib/error-utils';
 import { cn } from '../../../lib/utils';
 import { ModelSelect, type ModelOption } from '../../../components/ui/ModelSelect';
 import { type ProfileResponse } from '../../../api/profile';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface RepurposeTabProps {
   selectedModel: string;
@@ -22,6 +23,16 @@ interface RepurposeTabProps {
   isGenerating: boolean;
   setIsGenerating: (loading: boolean) => void;
   AI_MODELS: ModelOption[];
+  
+  // Results Props
+  generatedPosts: GeneratedPost[];
+  viewMode: 'grid' | 'list';
+  onDraft: (post: GeneratedPost, index: number) => void;
+  onSchedule: (post: GeneratedPost, index: number) => void;
+  onDelete: (index: number) => void;
+  onPredict: (draft: string, index: number) => void;
+  processingId: string | null;
+  isPredicting: Record<number, boolean>;
 }
 
 const RepurposeTab: React.FC<RepurposeTabProps> = ({ 
@@ -37,7 +48,17 @@ const RepurposeTab: React.FC<RepurposeTabProps> = ({
   onGenerated,
   isGenerating,
   setIsGenerating,
-  AI_MODELS
+  AI_MODELS,
+  
+  // Results Props
+  generatedPosts,
+  viewMode,
+  onDraft,
+  onSchedule,
+  onDelete,
+  onPredict,
+  processingId,
+  isPredicting
 }) => {
   const [repurposeUrl, setRepurposeUrl] = useState('');
   const [repurposeCount, setRepurposeCount] = useState(5);
@@ -192,12 +213,74 @@ const RepurposeTab: React.FC<RepurposeTabProps> = ({
           <h3 className="font-black text-xl uppercase tracking-[0.3em] text-muted-foreground/80 shrink-0 italic">Alchemy Output</h3>
         </div>
 
-        <div className="flex-1 min-h-0 flex flex-col items-center justify-center text-center py-20 lg:py-0 space-y-8 border-4 border-dashed border-white/5 rounded-[4rem] bg-secondary/5 relative overflow-hidden">
-          <RefreshCcw size={48} className="text-primary opacity-40 animate-pulse" />
-          <div className="max-w-md mx-auto space-y-3 px-6">
-            <h4 className="font-black text-4xl md:text-5xl tracking-tighter uppercase italic">Content Alchemist</h4>
-            <p className="text-muted-foreground font-medium opacity-60">Paste a URL and let AI transmute existing knowledge into viral content.</p>
-          </div>
+        <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar pr-2">
+           {generatedPosts.length > 0 ? (
+             <motion.div 
+               initial={{ opacity: 0, y: 20 }}
+               animate={{ opacity: 1, y: 0 }}
+               className="space-y-10 pb-20"
+             >
+               <div className={cn(
+                 "grid gap-6 lg:gap-8",
+                 viewMode === 'grid' ? "grid-cols-1 md:grid-cols-2" : "grid-cols-1"
+               )}>
+                 {generatedPosts.map((post, idx) => (
+                   <motion.div 
+                     key={idx}
+                     initial={{ opacity: 0, scale: 0.95 }}
+                     animate={{ opacity: 1, scale: 1 }}
+                     transition={{ delay: idx * 0.05 }}
+                     className={cn(
+                        "bg-card/40 backdrop-blur-xl border border-white/5 rounded-[2rem] overflow-hidden group hover:border-primary/30 transition-all shadow-xl",
+                        viewMode === 'list' && "flex flex-col md:flex-row h-auto md:h-64"
+                     )}
+                   >
+                     <div className={cn("relative overflow-hidden", viewMode === 'grid' ? "aspect-square" : "w-full md:w-64 h-64 md:h-full")}>
+                       <img src={post.imageUrl || ''} alt="AI Generated" className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
+                       <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-4">
+                          <p className="text-white text-[10px] font-semibold italic line-clamp-2">{post.imageSuggestion}</p>
+                       </div>
+                     </div>
+ 
+                     <div className="p-6 flex flex-col flex-1 justify-between space-y-4">
+                       <div className="space-y-3">
+                         <p className="text-xs font-medium leading-relaxed custom-scrollbar max-h-24 overflow-y-auto pr-2">{post.caption}</p>
+                         <div className="flex flex-wrap gap-1.5">
+                           {post.hashtags.map((tag, i) => (
+                             <span key={i} className="text-[9px] font-bold text-primary px-2 py-0.5 bg-primary/10 rounded-full border border-primary/20">{tag}</span>
+                           ))}
+                         </div>
+                       </div>
+ 
+                       <div className="pt-4 border-t border-white/5 flex flex-wrap gap-2">
+                          <Button onClick={() => onSchedule(post, idx)} disabled={processingId?.includes(`schedule-${idx}`)} className="flex-1 py-4 rounded-xl font-black uppercase tracking-widest text-[9px] flex items-center justify-center gap-2">
+                             {processingId?.includes(`schedule-${idx}`) ? <Loader2 size={12} className="animate-spin" /> : <Calendar size={12} />}
+                             Schedule
+                          </Button>
+                          <Button onClick={() => onDraft(post, idx)} variant="outline" disabled={processingId?.includes(`draft-${idx}`)} className="h-10 w-10 rounded-xl border-white/10 hover:bg-white/5 p-0 flex items-center justify-center">
+                             {processingId?.includes(`draft-${idx}`) ? <Loader2 size={12} className="animate-spin" /> : <Save size={12} />}
+                          </Button>
+                          <Button onClick={() => onPredict(post.caption, idx)} variant="outline" disabled={isPredicting[idx]} className="h-10 w-10 rounded-xl border-white/10 hover:bg-white/5 p-0 flex items-center justify-center group/btn">
+                             {isPredicting[idx] ? <Loader2 size={12} className="animate-spin" /> : <BarChart3 size={12} className="group-hover/btn:text-primary transition-colors" />}
+                          </Button>
+                          <Button onClick={() => onDelete(idx)} variant="ghost" className="h-10 w-10 rounded-xl text-destructive hover:bg-destructive/10 p-0 flex items-center justify-center">
+                             <Trash2 size={12} />
+                          </Button>
+                       </div>
+                     </div>
+                   </motion.div>
+                 ))}
+               </div>
+             </motion.div>
+           ) : (
+             <div className="h-full flex flex-col items-center justify-center text-center py-20 lg:py-0 space-y-8 border-4 border-dashed border-white/5 rounded-[4rem] bg-secondary/5 relative overflow-hidden">
+               <RefreshCcw size={48} className="text-primary opacity-40 animate-pulse" />
+               <div className="max-w-md mx-auto space-y-3 px-6">
+                 <h4 className="font-black text-4xl md:text-5xl tracking-tighter uppercase italic">Content Alchemist</h4>
+                 <p className="text-muted-foreground font-medium opacity-60">Paste a URL and let AI transmute existing knowledge into viral content.</p>
+               </div>
+             </div>
+           )}
         </div>
       </div>
     </div>

@@ -26,6 +26,18 @@ interface CarouselTabProps {
   selectedVoiceMode: string;
   setSelectedVoiceMode: (mode: string) => void;
   AI_MODELS: ModelOption[];
+
+  // Results Props (compatibility)
+  generatedPosts: GeneratedPost[];
+  generatedThreads: string[][];
+  viewMode: 'grid' | 'list';
+  onDraft: (post: GeneratedPost, index: number) => void;
+  onSchedule: (post: GeneratedPost, index: number) => void;
+  onDelete: (index: number) => void;
+  onPredict: (draft: string, index: number) => void;
+  onSaveThread: (thread: string[], status: any) => void;
+  processingId: string | null;
+  isPredicting: Record<number, boolean>;
 }
 
 const CarouselTab: React.FC<CarouselTabProps> = ({ 
@@ -152,6 +164,7 @@ const CarouselTab: React.FC<CarouselTabProps> = ({
             </label>
             <div className="flex bg-secondary/20 p-1 rounded-xl border border-white/5">
               {[
+                { id: 'NONE', label: 'None' },
                 { id: 'STYLE_DNA', label: 'DNA' },
                 { id: 'FULL_CONTEXT', label: 'Full' }
               ].map((m) => (
@@ -212,7 +225,7 @@ const CarouselTab: React.FC<CarouselTabProps> = ({
                       <p className="text-xl font-black tracking-tighter text-amber-500">
                         -{(() => {
                            const modelCost = AI_MODELS.find(m => m.id === selectedModel)?.cost || 4.0;
-                           const voiceCost = selectedVoiceMode === 'FULL_CONTEXT' ? 5.0 : 2.0;
+                           const voiceCost = selectedVoiceMode === 'FULL_CONTEXT' ? 5.0 : (selectedVoiceMode === 'STYLE_DNA' ? 2.0 : 0.0);
                            return ((modelCost * carouselSlideCount) + voiceCost).toFixed(1);
                         })()}
                       </p>

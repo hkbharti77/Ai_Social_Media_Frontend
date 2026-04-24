@@ -55,7 +55,7 @@ const GeneratePage: React.FC = () => {
   
   // App State
   const [subscription, setSubscription] = useState<ProfileResponse['subscription'] | null>(null);
-  const [selectedVoiceMode, setSelectedVoiceMode] = useState<string>('STYLE_DNA');
+  const [selectedVoiceMode, setSelectedVoiceMode] = useState<string>('NONE');
   const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
   const [upgradeMessage, setUpgradeMessage] = useState('');
 
@@ -109,7 +109,18 @@ const GeneratePage: React.FC = () => {
       setIsGenerating,
       selectedVoiceMode,
       setSelectedVoiceMode,
-      AI_MODELS
+      AI_MODELS,
+      // Results Props
+      generatedPosts,
+      generatedThreads,
+      viewMode,
+      onDraft: (p: any, i: number) => handleDraft(p, i, selectedPlatforms),
+      onSchedule: (p: any, i: number) => handleSchedule(p, i, selectedPlatforms),
+      onDelete: handleDelete,
+      onPredict: handlePredictPerformance,
+      onSaveThread: handleSaveThread,
+      processingId,
+      isPredicting,
     };
 
     switch (activeMainTab) {
@@ -200,33 +211,18 @@ const GeneratePage: React.FC = () => {
         </header>
 
         <div className="flex-1 min-h-0 overflow-hidden">
-           {generatedPosts.length > 0 || generatedThreads.length > 0 ? (
-             <ResultsView 
-               viewMode={viewMode}
-               generatedPosts={generatedPosts}
-               generatedThreads={generatedThreads}
-               processingId={processingId}
-               isPredicting={isPredicting}
-               onDraft={(p, i) => handleDraft(p, i, selectedPlatforms)}
-               onSchedule={(p, i) => handleSchedule(p, i, selectedPlatforms)}
-               onDelete={handleDelete}
-               onPredict={handlePredictPerformance}
-               onSaveThread={handleSaveThread}
-             />
-           ) : (
-             <AnimatePresence mode="wait">
-               <motion.div
-                 key={activeMainTab}
-                 initial={{ opacity: 0, scale: 0.98, y: 10 }}
-                 animate={{ opacity: 1, scale: 1, y: 0 }}
-                 exit={{ opacity: 0, scale: 1.02, y: -10 }}
-                 transition={{ duration: 0.3, ease: "easeOut" }}
-                 className="h-full"
-               >
-                 {renderActiveTab()}
-               </motion.div>
-             </AnimatePresence>
-           )}
+           <AnimatePresence mode="wait">
+             <motion.div
+               key={activeMainTab}
+               initial={{ opacity: 0, scale: 0.98, y: 10 }}
+               animate={{ opacity: 1, scale: 1, y: 0 }}
+               exit={{ opacity: 0, scale: 1.02, y: -10 }}
+               transition={{ duration: 0.3, ease: "easeOut" }}
+               className="h-full"
+             >
+               {renderActiveTab()}
+             </motion.div>
+           </AnimatePresence>
         </div>
       </div>
 

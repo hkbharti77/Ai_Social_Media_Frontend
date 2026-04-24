@@ -27,6 +27,18 @@ interface ReelTabProps {
   selectedVoiceMode: string;
   setSelectedVoiceMode: (mode: string) => void;
   AI_MODELS: ModelOption[];
+
+  // Results Props (compatibility)
+  generatedPosts: GeneratedPost[];
+  generatedThreads: string[][];
+  viewMode: 'grid' | 'list';
+  onDraft: (post: GeneratedPost, index: number) => void;
+  onSchedule: (post: GeneratedPost, index: number) => void;
+  onDelete: (index: number) => void;
+  onPredict: (draft: string, index: number) => void;
+  onSaveThread: (thread: string[], status: any) => void;
+  processingId: string | null;
+  isPredicting: Record<number, boolean>;
 }
 
 const ReelTab: React.FC<ReelTabProps> = ({ 
@@ -180,6 +192,7 @@ const ReelTab: React.FC<ReelTabProps> = ({
             </label>
             <div className="flex bg-secondary/20 p-1 rounded-xl border border-white/5">
               {[
+                { id: 'NONE', label: 'None' },
                 { id: 'STYLE_DNA', label: 'DNA' },
                 { id: 'FULL_CONTEXT', label: 'Full' }
               ].map((m) => (

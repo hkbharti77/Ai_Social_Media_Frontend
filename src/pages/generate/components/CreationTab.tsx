@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Wand2, Loader2, Sparkles, RefreshCcw } from 'lucide-react';
+import { Wand2, Loader2, Sparkles, RefreshCcw, Trash2, Calendar, Save, BarChart3 } from 'lucide-react';
 import { Button } from '../../../components/ui/Button';
 import { generatePostsApi, generateThreadApi, type GeneratedPost } from '../../../api/ai';
 import { toast } from 'sonner';
@@ -7,6 +7,8 @@ import { handleApiError } from '../../../lib/error-utils';
 import { cn } from '../../../lib/utils';
 import { ModelSelect, type ModelOption } from '../../../components/ui/ModelSelect';
 import { type ProfileResponse } from '../../../api/profile';
+import { motion, AnimatePresence } from 'framer-motion';
+import { PostStatus } from '../../../api/posts';
 
 interface CreationTabProps {
   selectedModel: string;
@@ -24,6 +26,18 @@ interface CreationTabProps {
   selectedVoiceMode: string;
   setSelectedVoiceMode: (mode: string) => void;
   AI_MODELS: ModelOption[];
+  
+  // Results Props
+  generatedPosts: GeneratedPost[];
+  generatedThreads: string[][];
+  viewMode: 'grid' | 'list';
+  onDraft: (post: GeneratedPost, index: number) => void;
+  onSchedule: (post: GeneratedPost, index: number) => void;
+  onDelete: (index: number) => void;
+  onPredict: (draft: string, index: number) => void;
+  onSaveThread: (thread: string[], status: any) => void;
+  processingId: string | null;
+  isPredicting: Record<number, boolean>;
 }
 
 const CreationTab: React.FC<CreationTabProps> = ({ 
@@ -40,7 +54,19 @@ const CreationTab: React.FC<CreationTabProps> = ({
   setIsGenerating,
   selectedVoiceMode,
   setSelectedVoiceMode,
-  AI_MODELS
+  AI_MODELS,
+  
+  // Results Props
+  generatedPosts,
+  generatedThreads,
+  viewMode,
+  onDraft,
+  onSchedule,
+  onDelete,
+  onPredict,
+  onSaveThread,
+  processingId,
+  isPredicting
 }) => {
   const [command, setCommand] = useState('');
   const [batchCount, setBatchCount] = useState(3);
@@ -217,13 +243,15 @@ const CreationTab: React.FC<CreationTabProps> = ({
                 onChange={(e) => setSelectedVoiceMode(e.target.value)}
                 className="w-full bg-transparent text-xs font-black uppercase tracking-widest text-primary focus:ring-0 outline-none px-2"
               >
+                <option value="NONE">None / Standard (0 Credits)</option>
                 <option value="STYLE_DNA">Style DNA (+2 Credits)</option>
                 <option value="FULL_CONTEXT">Full Context (+5 Credits)</option>
               </select>
             </div>
             <p className="text-[10px] text-muted-foreground/60 italic px-1 leading-tight">
               {selectedVoiceMode === 'STYLE_DNA' ? 'Uses your Style DNA Persona (+2 cr).' : 
-               'Analyzes raw samples + images (+5 cr).'}
+               selectedVoiceMode === 'FULL_CONTEXT' ? 'Analyzes raw samples + images (+5 cr).' :
+               'Standard brand identity (No extra cost).'}
             </p>
           </div>
 
@@ -247,7 +275,7 @@ const CreationTab: React.FC<CreationTabProps> = ({
                       <p className="text-xl font-black tracking-tighter text-amber-500">
                         -{(() => {
                            const modelCost = AI_MODELS.find(m => m.id === selectedModel)?.cost || 4.0;
-                           const voiceCost = selectedVoiceMode === 'FULL_CONTEXT' ? 5.0 : 2.0;
+                           const voiceCost = selectedVoiceMode === 'FULL_CONTEXT' ? 5.0 : (selectedVoiceMode === 'STYLE_DNA' ? 2.0 : 0.0);
                            return ((modelCost + voiceCost) * (isThreadMode ? 2 : batchCount)).toFixed(1);
                         })()}
                       </p>
@@ -286,13 +314,110 @@ const CreationTab: React.FC<CreationTabProps> = ({
           <h3 className="font-black text-xl uppercase tracking-[0.3em] text-muted-foreground/80 shrink-0 italic">Studio Output</h3>
         </div>
 
-        <div className="flex-1 min-h-0 flex flex-col items-center justify-center text-center py-20 lg:py-0 space-y-8 border-4 border-dashed border-white/5 rounded-[4rem] bg-secondary/5 relative overflow-hidden">
-          <Sparkles size={48} className="text-primary opacity-40 animate-pulse" />
-          <div className="max-w-md mx-auto space-y-3 px-6">
-            <h4 className="font-black text-4xl md:text-5xl tracking-tighter uppercase italic">AI Studio</h4>
-            <p className="text-muted-foreground font-medium opacity-60">Describe your vision and watch AI manifest your brand identity.</p>
-          </div>
-          <Button size="lg" className="px-12 h-16 rounded-[1.5rem] text-xl font-black group shadow-2xl transition-all active:scale-95" onClick={handleGenerate}>Creative Session</Button>
+        <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar pr-2">
+           {generatedPosts.length > 0 || generatedThreads.length > 0 ? (
+             <motion.div 
+               initial={{ opacity: 0, y: 20 }}
+               animate={{ opacity: 1, y: 0 }}
+               className="space-y-10 pb-20"
+             >
+               <div className={cn(
+                 "grid gap-6 lg:gap-8",
+                 viewMode === 'grid' ? "grid-cols-1 md:grid-cols-2" : "grid-cols-1"
+               )}>
+                 {generatedPosts.map((post, idx) => (
+                   <motion.div 
+                     key={idx}
+                     initial={{ opacity: 0, scale: 0.95 }}
+                     animate={{ opacity: 1, scale: 1 }}
+                     transition={{ delay: idx * 0.05 }}
+                     className={cn(
+                        "bg-card/40 backdrop-blur-xl border border-white/5 rounded-[2rem] overflow-hidden group hover:border-primary/30 transition-all shadow-xl",
+                        viewMode === 'list' && "flex flex-col md:flex-row h-auto md:h-64"
+                     )}
+                   >
+                     <div className={cn("relative overflow-hidden", viewMode === 'grid' ? "aspect-square" : "w-full md:w-64 h-64 md:h-full")}>
+                       <img src={post.imageUrl || ''} alt="AI Generated" className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
+                       <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-4">
+                          <p className="text-white text-[10px] font-semibold italic line-clamp-2">{post.imageSuggestion}</p>
+                       </div>
+                     </div>
+ 
+                     <div className="p-6 flex flex-col flex-1 justify-between space-y-4">
+                       <div className="space-y-3">
+                         <p className="text-xs font-medium leading-relaxed custom-scrollbar max-h-24 overflow-y-auto pr-2">{post.caption}</p>
+                         <div className="flex flex-wrap gap-1.5">
+                           {post.hashtags.map((tag, i) => (
+                             <span key={i} className="text-[9px] font-bold text-primary px-2 py-0.5 bg-primary/10 rounded-full border border-primary/20">{tag}</span>
+                           ))}
+                         </div>
+                       </div>
+ 
+                       <div className="pt-4 border-t border-white/5 flex flex-wrap gap-2">
+                          <Button onClick={() => onSchedule(post, idx)} disabled={processingId?.includes(`schedule-${idx}`)} className="flex-1 py-4 rounded-xl font-black uppercase tracking-widest text-[9px] flex items-center justify-center gap-2">
+                             {processingId?.includes(`schedule-${idx}`) ? <Loader2 size={12} className="animate-spin" /> : <Calendar size={12} />}
+                             Schedule
+                          </Button>
+                          <Button onClick={() => onDraft(post, idx)} variant="outline" disabled={processingId?.includes(`draft-${idx}`)} className="h-10 w-10 rounded-xl border-white/10 hover:bg-white/5 p-0 flex items-center justify-center">
+                             {processingId?.includes(`draft-${idx}`) ? <Loader2 size={12} className="animate-spin" /> : <Save size={12} />}
+                          </Button>
+                          <Button onClick={() => onPredict(post.caption, idx)} variant="outline" disabled={isPredicting[idx]} className="h-10 w-10 rounded-xl border-white/10 hover:bg-white/5 p-0 flex items-center justify-center group/btn">
+                             {isPredicting[idx] ? <Loader2 size={12} className="animate-spin" /> : <BarChart3 size={12} className="group-hover/btn:text-primary transition-colors" />}
+                          </Button>
+                          <Button onClick={() => onDelete(idx)} variant="ghost" className="h-10 w-10 rounded-xl text-destructive hover:bg-destructive/10 p-0 flex items-center justify-center">
+                             <Trash2 size={12} />
+                          </Button>
+                       </div>
+                     </div>
+                   </motion.div>
+                 ))}
+ 
+                 {generatedThreads.map((thread, threadIdx) => (
+                   <motion.div 
+                      key={`thread-${threadIdx}`}
+                      initial={{ opacity: 0, x: -10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      className="col-span-full bg-card/40 border border-white/5 rounded-[2rem] p-6 space-y-4"
+                   >
+                      <div className="flex justify-between items-center bg-primary/5 p-4 rounded-xl border border-primary/20">
+                         <span className="text-xs font-black uppercase italic text-primary">Thread Concept {threadIdx + 1}</span>
+                         <div className="flex gap-2">
+                            <Button onClick={() => onSaveThread(thread, PostStatus.SCHEDULED)} variant="outline" className="h-8 px-3 rounded-lg border-primary/30 text-primary uppercase text-[8px] font-black tracking-widest">
+                               Schedule
+                            </Button>
+                            <Button onClick={() => onSaveThread(thread, PostStatus.DRAFT)} variant="ghost" className="h-8 px-3 rounded-lg text-muted-foreground uppercase text-[8px] font-black tracking-widest">
+                               Draft
+                            </Button>
+                         </div>
+                      </div>
+                      
+                      <div className="space-y-3">
+                         {thread.map((tweet, idx) => (
+                           <div key={idx} className="flex gap-3">
+                             <div className="flex flex-col items-center">
+                                <div className="w-6 h-6 rounded-full bg-secondary flex items-center justify-center text-[8px] font-black">{idx+1}</div>
+                                {idx < thread.length - 1 && <div className="w-0.5 flex-1 bg-white/5 my-1"></div>}
+                             </div>
+                             <div className="flex-1 p-3 bg-secondary/10 rounded-xl text-[10px] font-medium leading-relaxed">
+                                {tweet}
+                             </div>
+                           </div>
+                         ))}
+                      </div>
+                   </motion.div>
+                 ))}
+               </div>
+             </motion.div>
+           ) : (
+             <div className="h-full flex flex-col items-center justify-center text-center space-y-8 border-4 border-dashed border-white/5 rounded-[4rem] bg-secondary/5 relative overflow-hidden">
+               <Sparkles size={48} className="text-primary opacity-40 animate-pulse" />
+               <div className="max-w-md mx-auto space-y-3 px-6">
+                 <h4 className="font-black text-4xl md:text-5xl tracking-tighter uppercase italic">AI Studio</h4>
+                 <p className="text-muted-foreground font-medium opacity-60">Describe your vision and watch AI manifest your brand identity.</p>
+               </div>
+               <Button size="lg" className="px-12 h-16 rounded-[1.5rem] text-xl font-black group shadow-2xl transition-all active:scale-95" onClick={handleGenerate}>Creative Session</Button>
+             </div>
+           )}
         </div>
       </div>
     </div>

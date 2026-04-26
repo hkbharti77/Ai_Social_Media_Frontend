@@ -71,6 +71,7 @@ const CreationTab: React.FC<CreationTabProps> = ({
   const [command, setCommand] = useState('');
   const [batchCount, setBatchCount] = useState(3);
   const [isThreadMode, setIsThreadMode] = useState(false);
+  const [contentType, setContentType] = useState<'MARKETING' | 'EDUCATIONAL'>('MARKETING');
 
   const handleGenerate = async () => {
     if (!command.trim()) {
@@ -84,7 +85,7 @@ const CreationTab: React.FC<CreationTabProps> = ({
     }
 
     setIsGenerating(true);
-    toast.info("AI is crafting your posts...", {
+    toast.info(`AI is crafting your ${contentType.toLowerCase()} posts...`, {
       icon: <RefreshCcw size={16} className="animate-spin text-primary" />,
     });
 
@@ -94,7 +95,8 @@ const CreationTab: React.FC<CreationTabProps> = ({
         count: batchCount,
         modelId: selectedModel,
         aspectRatio: selectedAspectRatio,
-        voiceMode: selectedVoiceMode
+        voiceMode: selectedVoiceMode,
+        contentType: contentType
       });
       onGenerated(response.posts);
       toast.success(`Successfully generated ${response.posts.length} posts!`);
@@ -113,7 +115,7 @@ const CreationTab: React.FC<CreationTabProps> = ({
 
   const handleGenerateThread = async () => {
     setIsGenerating(true);
-    toast.info("AI is weaving your thread...", {
+    toast.info(`AI is weaving your ${contentType.toLowerCase()} thread...`, {
       icon: <RefreshCcw size={16} className="animate-spin text-primary" />,
     });
 
@@ -123,7 +125,8 @@ const CreationTab: React.FC<CreationTabProps> = ({
         command,
         count: 1,
         modelId: selectedModel,
-        voiceMode: selectedVoiceMode
+        voiceMode: selectedVoiceMode,
+        contentType: contentType
       }));
       
       const results = await Promise.all(promises);
@@ -224,6 +227,35 @@ const CreationTab: React.FC<CreationTabProps> = ({
               className="w-full h-1.5 bg-secondary/50 rounded-full appearance-none cursor-pointer accent-primary" 
             />
             <p className="text-[9px] text-muted-foreground/40 italic px-1">Safety Limit: Max 20 posts per batch.</p>
+          </div>
+
+          {/* Content Purpose */}
+          <div className="space-y-4 border-l-2 border-emerald-500/20 pl-4 bg-emerald-500/5 p-4 rounded-2xl">
+            <label className="text-[10px] font-black uppercase tracking-[0.2em] text-emerald-600 px-1 flex items-center gap-2">
+              <Sparkles size={12} /> Content Purpose
+            </label>
+            <div className="flex bg-secondary/20 p-1 rounded-xl border border-white/5">
+              {[
+                { id: 'MARKETING', label: 'Marketing' },
+                { id: 'EDUCATIONAL', label: 'Educational' }
+              ].map((m) => (
+                <button
+                  key={m.id}
+                  onClick={() => setContentType(m.id as any)}
+                  className={cn(
+                    "flex-1 py-2 rounded-lg text-[10px] font-black uppercase transition-all",
+                    contentType === m.id ? "bg-emerald-500 text-white shadow-lg" : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  {m.label}
+                </button>
+              ))}
+            </div>
+            <p className="text-[9px] text-muted-foreground/60 italic px-1 leading-tight">
+              {contentType === 'EDUCATIONAL' 
+                ? 'Persona: Educator. Focus: Value-driven explanations & teaching.' 
+                : 'Persona: Marketer. Focus: Brand growth, ROI & awareness.'}
+            </p>
           </div>
 
           {/* Model Select */}

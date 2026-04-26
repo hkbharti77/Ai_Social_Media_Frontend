@@ -60,6 +60,7 @@ const CampaignTab: React.FC<CampaignTabProps> = ({
   const [campaignGoal, setCampaignGoal] = useState('');
   const [campaignResult, setCampaignResult] = useState<CampaignResponse | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [contentType, setContentType] = useState<'MARKETING' | 'EDUCATIONAL'>('MARKETING');
 
   const handleGenerate = async () => {
     if (!campaignGoal.trim()) {
@@ -69,7 +70,7 @@ const CampaignTab: React.FC<CampaignTabProps> = ({
     
     setIsGenerating(true);
     setCampaignResult(null);
-    toast.info("AI is strategizing your full 360° campaign...", {
+    toast.info(`AI is strategizing your ${contentType.toLowerCase()} campaign...`, {
       icon: <RefreshCcw size={16} className="animate-spin text-primary" />,
     });
 
@@ -78,7 +79,8 @@ const CampaignTab: React.FC<CampaignTabProps> = ({
         goal: campaignGoal,
         modelId: selectedModel,
         aspectRatio: selectedAspectRatio,
-        voiceMode: selectedVoiceMode
+        voiceMode: selectedVoiceMode,
+        contentType: contentType
       });
       setCampaignResult(response);
       toast.success("Full Coordinated Campaign Generated!");
@@ -211,6 +213,35 @@ const CampaignTab: React.FC<CampaignTabProps> = ({
                 </button>
               ))}
             </div>
+          </div>
+
+          {/* Campaign Purpose */}
+          <div className="space-y-4 border-l-2 border-emerald-500/20 pl-4 bg-emerald-500/5 p-4 rounded-2xl">
+            <label className="text-[10px] font-black uppercase tracking-[0.2em] text-emerald-600 px-1 flex items-center gap-2">
+              <Target size={12} /> Campaign Purpose
+            </label>
+            <div className="flex bg-secondary/20 p-1 rounded-xl border border-white/5">
+              {[
+                { id: 'MARKETING', label: 'Marketing' },
+                { id: 'EDUCATIONAL', label: 'Educational' }
+              ].map((m) => (
+                <button
+                  key={m.id}
+                  onClick={() => setContentType(m.id as any)}
+                  className={cn(
+                    "flex-1 py-2 rounded-lg text-[10px] font-black uppercase transition-all",
+                    contentType === m.id ? "bg-emerald-500 text-white shadow-lg" : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  {m.label}
+                </button>
+              ))}
+            </div>
+            <p className="text-[9px] text-muted-foreground/60 italic px-1 leading-tight">
+              {contentType === 'EDUCATIONAL' 
+                ? 'Persona: Educator. Focus: Value-driven explanations & teaching.' 
+                : 'Persona: Marketer. Focus: Brand growth, ROI & awareness.'}
+            </p>
           </div>
 
           {/* Goal Input */}

@@ -14,6 +14,7 @@ export interface PostGenerationRequest {
   modelId?: string;
   aspectRatio?: string;
   voiceMode?: string;
+  contentType?: 'MARKETING' | 'EDUCATIONAL';
 }
 
 export interface GenerationResponse {
@@ -174,6 +175,7 @@ export interface CampaignGenerationRequest {
   modelId?: string;
   aspectRatio?: string;
   voiceMode?: string;
+  contentType?: 'MARKETING' | 'EDUCATIONAL';
 }
 
 export interface CampaignResponse {

@@ -13,6 +13,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { getUserDirectory, type UserIntelligence } from '../../api/admin';
 import { useAuth } from '../../context/useAuth';
+import PageWrapper from '../../components/layout/PageWrapper';
 
 const AdminUserDirectory: React.FC = () => {
     const [users, setUsers] = useState<UserIntelligence[]>([]);
@@ -55,7 +56,8 @@ const AdminUserDirectory: React.FC = () => {
     }
 
     return (
-        <div className="p-8 space-y-8 bg-[#030303] min-h-screen text-white/90">
+        <PageWrapper>
+            <div className="p-8 space-y-8 min-h-screen">
             {/* Header */}
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
                 <div className="flex items-center gap-4">
@@ -174,6 +176,7 @@ const AdminUserDirectory: React.FC = () => {
                 </button>
             </div>
         </div>
+        </PageWrapper>
     );
 };
 

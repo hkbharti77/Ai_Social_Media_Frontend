@@ -97,7 +97,22 @@ const PostCard: React.FC<PostCardProps> = ({
     >
       {/* ── Image Area ─────────────────────────────────── */}
       <div className="aspect-[4/5] bg-secondary/20 relative overflow-hidden">
-        {post.imageUrl ? (
+        {post.videoUrl ? (
+          <div className="w-full h-full relative group/video">
+            <video
+              src={post.videoUrl}
+              poster={post.imageUrl}
+              className="object-cover w-full h-full"
+              muted
+              onMouseOver={(e) => (e.target as HTMLVideoElement).play()}
+              onMouseOut={(e) => (e.target as HTMLVideoElement).pause()}
+              loop
+            />
+            <div className="absolute top-4 right-4 bg-black/60 backdrop-blur-md p-2 rounded-xl border border-white/10 z-20">
+               <Smartphone size={14} className="text-white" />
+            </div>
+          </div>
+        ) : post.imageUrl ? (
           <img
             src={post.imageUrl}
             alt={post.caption || 'Post preview'}

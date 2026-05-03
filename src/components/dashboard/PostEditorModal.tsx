@@ -280,9 +280,16 @@ const PostEditorModal: React.FC<PostEditorModalProps> = ({ isOpen, onClose, onSa
                         <button
                           key={type.id}
                           onClick={() => {
-                            setIsStory(type.id === 'story');
+                            const isStoryMode = type.id === 'story';
+                            setIsStory(isStoryMode);
                             setIsPoll(type.id === 'poll');
                             setIsReel(type.id === 'reel');
+                            
+                            // Auto-switch platform if Story is selected and current platform doesn't support stories
+                            if (isStoryMode && platform === 'LINKEDIN') {
+                              setPlatform('INSTAGRAM');
+                              toast.info('Switched to Instagram - LinkedIn doesn\'t support Stories');
+                            }
                           }}
                           className={cn(
                             "flex-1 flex items-center justify-center gap-2.5 py-4 rounded-xl transition-all duration-300 font-black uppercase tracking-widest text-[10px]",
@@ -448,7 +455,15 @@ const PostEditorModal: React.FC<PostEditorModalProps> = ({ isOpen, onClose, onSa
                     <div className="space-y-3">
                       <label className="text-xs font-black uppercase tracking-[0.2em] text-muted-foreground px-1">Platform Target</label>
                       <div className="flex bg-secondary/20 p-1.5 rounded-2xl border border-white/5 gap-1">
-                        {(['FACEBOOK', 'INSTAGRAM', 'LINKEDIN'] as const).map((p) => (
+                        {(['FACEBOOK', 'INSTAGRAM', 'LINKEDIN'] as const)
+                          .filter(p => {
+                            // Stories are only supported on Instagram and Facebook
+                            if (isStory) {
+                              return p === 'INSTAGRAM' || p === 'FACEBOOK';
+                            }
+                            return true;
+                          })
+                          .map((p) => (
                           <button
                             key={p}
                             onClick={() => setPlatform(p)}

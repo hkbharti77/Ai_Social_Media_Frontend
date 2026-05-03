@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Search, Eye, ExternalLink, Image as ImageIcon, MessageSquare, Clock, User, Cpu, Hash, ShieldAlert, Activity } from 'lucide-react';
 import { getDetailedAiLogs, type DetailedAiLog } from '../../api/admin';
 import { useAuth } from '../../context/useAuth';
+import PageWrapper from '../../components/layout/PageWrapper';
 
 const AdminTokenAudit: React.FC = () => {
     const [logs, setLogs] = useState<DetailedAiLog[]>([]);
@@ -51,7 +52,8 @@ const AdminTokenAudit: React.FC = () => {
     }
 
     return (
-        <div className="p-8 space-y-8 bg-[#030303] min-h-screen text-white/90">
+        <PageWrapper>
+            <div className="p-8 space-y-8 min-h-screen">
              {/* Header */}
              <div className="flex justify-between items-center">
                 <div>
@@ -249,6 +251,7 @@ const AdminTokenAudit: React.FC = () => {
                 )}
             </AnimatePresence>
         </div>
+        </PageWrapper>
     );
 };
 

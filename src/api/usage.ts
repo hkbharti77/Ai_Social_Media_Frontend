@@ -45,14 +45,22 @@ export const downloadReceiptPdf = async (orderId: string) => {
   const response = await axios.get(`/payments/receipt/${orderId}`, {
     responseType: 'blob',
   });
-  
-  const url = window.URL.createObjectURL(new Blob([response.data]));
+
+  // Verify we got a PDF back (not an error JSON)
+  const contentType = response.headers['content-type'] || '';
+  if (!contentType.includes('pdf')) {
+    throw new Error('Receipt not available for this order');
+  }
+
+  const blobUrl = window.URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }));
   const link = document.createElement('a');
-  link.href = url;
+  link.href = blobUrl;
   link.setAttribute('download', `receipt-${orderId}.pdf`);
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
+  // Revoke URL to free memory
+  window.URL.revokeObjectURL(blobUrl);
 };
 
 export const getUsageHistory = async (): Promise<CreditUsage[]> => {

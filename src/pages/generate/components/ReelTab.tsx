@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
-import { Smartphone, Loader2, Sparkles, Trash2, Save, Send, CloudUpload, CheckCircle2, Video, RefreshCcw, Film } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Smartphone, Loader2, Sparkles, Trash2, Save, Send, CloudUpload, CheckCircle2, Video, RefreshCcw, Film, Zap, Star } from 'lucide-react';
 import { Button } from '../../../components/ui/Button';
-import { generateReelApi, type ReelResponse, type GeneratedPost } from '../../../api/ai';
+import { generateReelApi, generateVideoApi, type ReelResponse, type VideoGenerationResponse, type GeneratedPost } from '../../../api/ai';
 import { createPostApi, PostStatus } from '../../../api/posts';
 import axiosInstance from '../../../api/axios';
 import { toast } from 'sonner';
@@ -10,6 +10,8 @@ import { motion } from 'framer-motion';
 import { cn } from '../../../lib/utils';
 import { ModelSelect, type ModelOption } from '../../../components/ui/ModelSelect';
 import { type ProfileResponse } from '../../../api/profile';
+import VideoCreditWalletComponent from '../../../components/ui/VideoCreditWallet';
+import { getVideoModelsApi, type VideoModel } from '../../../api/videoCredits';
 
 interface ReelTabProps {
   selectedModel: string;
@@ -59,9 +61,34 @@ const ReelTab: React.FC<ReelTabProps> = ({
 }) => {
   const [reelCommand, setReelCommand] = useState('');
   const [reelResult, setReelResult] = useState<ReelResponse | null>(null);
+  const [videoResult, setVideoResult] = useState<VideoGenerationResponse | null>(null);
+  const [generateActualVideo, setGenerateActualVideo] = useState(false);
+  const [videoAspectRatio, setVideoAspectRatio] = useState<'9:16' | '16:9'>('9:16');
   const [isProcessing, setIsProcessing] = useState(false);
   const [uploadedVideoUrl, setUploadedVideoUrl] = useState<string | null>(null);
   const [isUploadingReel, setIsUploadingReel] = useState(false);
+
+  // Video model selection
+  const [selectedVideoModel, setSelectedVideoModel] = useState('veo-lite');
+  const [availableVideoModels, setAvailableVideoModels] = useState<VideoModel[]>([]);
+  const [walletKey, setWalletKey] = useState(0); // force wallet refresh
+
+  const VIDEO_MODELS = [
+    { id: 'veo-lite',     label: 'Veo Lite',     icon: <Film size={14} />,  color: 'text-emerald-400', desc: 'Economy · Social media' },
+    { id: 'veo-fast',     label: 'Veo Fast',     icon: <Zap size={14} />,   color: 'text-blue-400',    desc: 'Balanced · Fast gen' },
+    { id: 'veo-standard', label: 'Veo Standard', icon: <Star size={14} />,  color: 'text-purple-400',  desc: 'Premium · Cinematic' },
+  ];
+
+  useEffect(() => {
+    if (generateActualVideo) {
+      getVideoModelsApi().then(res => {
+        setAvailableVideoModels(res.models);
+        // Default to first accessible model
+        const first = res.models.find(m => m.accessible);
+        if (first) setSelectedVideoModel(first.modelId);
+      }).catch(() => {});
+    }
+  }, [generateActualVideo]);
 
   const handleGenerate = async () => {
     if (!reelCommand.trim()) {
@@ -71,28 +98,67 @@ const ReelTab: React.FC<ReelTabProps> = ({
     
     setIsGenerating(true);
     setReelResult(null);
-    toast.info("AI is writing your reel script & designing a thumbnail...", {
+    setVideoResult(null);
+
+    const message = generateActualVideo 
+      ? "Generating your video... this takes 30–60 seconds" 
+      : "AI is writing your reel script & designing a thumbnail...";
+
+    toast.info(message, {
       icon: <RefreshCcw size={16} className="animate-spin text-primary" />,
     });
 
     try {
-      const response = await generateReelApi({
-        command: reelCommand,
-        count: 1,
-        modelId: selectedModel,
-        aspectRatio: selectedAspectRatio,
-        voiceMode: selectedVoiceMode
-      });
-      setReelResult(response);
-      toast.success("AI Reel Script generated!");
-      if (onGenerated) onGenerated([]); // Sync global state
+      if (generateActualVideo) {
+        const response = await generateVideoApi({
+          command: reelCommand,
+          count: 1,
+          modelId: selectedModel,
+          aspectRatio: videoAspectRatio,
+          voiceMode: selectedVoiceMode,
+          generateActualVideo: true,
+          videoModelId: selectedVideoModel,
+        });
+        setVideoResult(response);
+        // Refresh wallet after credit deduction
+        setWalletKey(k => k + 1);
+        const modelLabel = VIDEO_MODELS.find(m => m.id === selectedVideoModel)?.label || selectedVideoModel;
+        toast.success(`${modelLabel} video generated! 1 credit deducted.`);
+        // Show wallet warnings if any
+        if (response.wallet?.warnings?.length) {
+          response.wallet.warnings.forEach(w => toast.warning(w));
+        }
+      } else {
+        const response = await generateReelApi({
+          command: reelCommand,
+          count: 1,
+          modelId: selectedModel,
+          aspectRatio: selectedAspectRatio,
+          voiceMode: selectedVoiceMode
+        });
+        setReelResult(response);
+        toast.success("AI Reel Script generated!");
+      }
+      
+      if (onGenerated) onGenerated([]);
       onSuccess();
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
       if (error.response?.status === 402) {
-        onUpgradeRequired("You've reached your credit limit!");
+        const data = error.response?.data;
+        if (data?.buyCreditsUrl) {
+          toast.error(`No video credits. Buy from ₹${data.cheapestPackPrice || '55'} to continue.`, { duration: 6000 });
+        } else {
+          onUpgradeRequired(data?.message || "Insufficient credits for video generation.");
+        }
+      } else if (error.response?.status === 403) {
+        onUpgradeRequired(error.response?.data?.message || "Upgrade your plan to generate videos.");
+      } else if (error.response?.status === 429) {
+        toast.error("Veo API rate limit reached. Please try again in a few minutes.");
+      } else if (error.response?.status === 504) {
+        toast.error("Video generation timed out. Please try again.");
       } else {
-        handleApiError(error, "Failed to generate reel script.");
+        handleApiError(error, generateActualVideo ? "Failed to generate video." : "Failed to generate reel script.");
       }
     } finally {
       setIsGenerating(false);
@@ -126,21 +192,33 @@ const ReelTab: React.FC<ReelTabProps> = ({
   };
 
   const handleSave = async (status: PostStatus) => {
-    if (!reelResult) return;
+    if (!reelResult && !videoResult) return;
     setIsProcessing(true);
     try {
-      await createPostApi({
-        caption: reelResult.caption,
-        hashtags: reelResult.hashtags.join(' '),
-        imageUrl: reelResult.imageUrl || '',
+      const data = videoResult ? {
+        caption: videoResult.video.caption || '',
+        hashtags: (videoResult.video.hashtags || []).join(' '),
+        videoUrl: videoResult.video.videoUrl || '',
+        imageUrl: videoResult.video.imageUrl || '',
+        videoScript: videoResult.video.videoScript || '',
+        platform: 'INSTAGRAM' as const,
+        status: status,
+        isReel: true
+      } : {
+        caption: reelResult?.caption || '',
+        hashtags: (reelResult?.hashtags || []).join(' '),
+        imageUrl: reelResult?.imageUrl || '',
         videoUrl: uploadedVideoUrl || undefined,
-        platform: 'INSTAGRAM',
+        platform: 'INSTAGRAM' as const,
         status: status,
         isReel: true,
-        videoScript: reelResult.videoScript
-      });
+        videoScript: reelResult?.videoScript || ''
+      };
+
+      await createPostApi(data);
       toast.success(status === PostStatus.DRAFT ? "Reel saved to drafts!" : "Reel scheduled!");
       setReelResult(null);
+      setVideoResult(null);
       setUploadedVideoUrl(null);
     } catch (error) {
       handleApiError(error, "Failed to save reel.");
@@ -227,6 +305,101 @@ const ReelTab: React.FC<ReelTabProps> = ({
             <ModelSelect options={AI_MODELS} selectedId={selectedModel} onSelect={setSelectedModel} userTierOrdinal={subscription?.tierOrdinal || 0} purchasedModelIds={subscription?.purchasedModelIds} />
           </div>
 
+          {/* Veo Actual Video Toggle */}
+          <div className="space-y-4 p-5 rounded-[1.5rem] bg-primary/5 border border-primary/10">
+            <div className="flex items-center justify-between">
+              <label className="text-[10px] font-black uppercase tracking-[0.2em] text-primary flex items-center gap-2">
+                <Video size={14} /> Veo 3.1 Actual Video
+              </label>
+              <button 
+                onClick={() => setGenerateActualVideo(!generateActualVideo)}
+                className={cn(
+                  "w-12 h-6 rounded-full transition-all relative",
+                  generateActualVideo ? "bg-primary" : "bg-muted"
+                )}
+              >
+                <div className={cn("absolute top-1 w-4 h-4 rounded-full bg-white transition-all", generateActualVideo ? "right-1" : "left-1")} />
+              </button>
+            </div>
+            
+            {generateActualVideo && (
+              <div className="space-y-4 pt-2 animate-in fade-in slide-in-from-top-2">
+                {/* Video Model Selector */}
+                <div className="space-y-2">
+                  <label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Video Model</label>
+                  <div className="grid grid-cols-1 gap-2">
+                    {VIDEO_MODELS.map((vm) => {
+                      const modelInfo = availableVideoModels.find(m => m.modelId === vm.id);
+                      const accessible = modelInfo?.accessible ?? (vm.id === 'veo-lite');
+                      return (
+                        <button
+                          key={vm.id}
+                          onClick={() => accessible && setSelectedVideoModel(vm.id)}
+                          disabled={!accessible}
+                          className={cn(
+                            'flex items-center justify-between p-3 rounded-xl border text-left transition-all',
+                            selectedVideoModel === vm.id && accessible
+                              ? 'border-primary bg-primary/10'
+                              : accessible
+                              ? 'border-white/10 bg-background/40 hover:border-white/20'
+                              : 'border-white/5 bg-background/20 opacity-40 cursor-not-allowed'
+                          )}
+                        >
+                          <div className="flex items-center gap-2">
+                            <span className={vm.color}>{vm.icon}</span>
+                            <div>
+                              <p className={cn('text-[11px] font-black', vm.color)}>{vm.label}</p>
+                              <p className="text-[9px] text-muted-foreground">{vm.desc}</p>
+                            </div>
+                          </div>
+                          {!accessible && (
+                            <span className="text-[9px] font-black text-muted-foreground uppercase border border-white/10 px-2 py-0.5 rounded-lg">
+                              {modelInfo?.requiredTier || 'Upgrade'}
+                            </span>
+                          )}
+                          {accessible && selectedVideoModel === vm.id && (
+                            <div className="w-2 h-2 rounded-full bg-primary" />
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Aspect Ratio */}
+                <div className="space-y-2">
+                  <label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Aspect Ratio</label>
+                  <div className="flex gap-2">
+                    {(['9:16', '16:9'] as const).map((r) => (
+                      <button
+                        key={r}
+                        onClick={() => setVideoAspectRatio(r)}
+                        className={cn(
+                          "flex-1 py-2 rounded-xl text-[10px] font-black transition-all border",
+                          videoAspectRatio === r ? "bg-primary text-white border-primary" : "bg-background text-muted-foreground border-white/5 hover:border-white/20"
+                        )}
+                      >
+                        {r}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Video Credit Wallet */}
+                {subscription && (
+                  <div className="space-y-2">
+                    <label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Video Credit Wallet</label>
+                    <VideoCreditWalletComponent
+                      key={walletKey}
+                      userTier={subscription.tier}
+                      onWalletUpdate={() => {}}
+                    />
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
           {/* Credit Summary & Action */}
           <div className="space-y-6 pt-4">
             {subscription && (
@@ -237,14 +410,15 @@ const ReelTab: React.FC<ReelTabProps> = ({
                       <p className={cn("text-xl font-black tracking-tighter", subscription.monthlyCredits < 10 ? "text-rose-500" : "text-primary")}>{subscription.monthlyCredits.toFixed(1)}</p>
                    </div>
                    <div className="text-right space-y-0.5">
-                      <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground font-sans text-right">Est. Reel Cost</p>
-                      <p className="text-xl font-black tracking-tighter text-amber-500">
-                        -{(() => {
-                           const modelCost = AI_MODELS.find(m => m.id === selectedModel)?.cost || 4.0;
-                           const voiceCost = selectedVoiceMode === 'FULL_CONTEXT' ? 5.0 : (selectedVoiceMode === 'STYLE_DNA' ? 2.0 : 0.0);
-                           return (modelCost + voiceCost).toFixed(1);
-                        })()}
-                      </p>
+                       <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground font-sans text-right">Est. Reel Cost</p>
+                       <p className="text-xl font-black tracking-tighter text-amber-500">
+                         -{(() => {
+                            const modelCost = AI_MODELS.find(m => m.id === selectedModel)?.cost || 4.0;
+                            const voiceCost = selectedVoiceMode === 'FULL_CONTEXT' ? 5.0 : (selectedVoiceMode === 'STYLE_DNA' ? 2.0 : 0.0);
+                            const videoCost = generateActualVideo ? 20.0 : 0.0;
+                            return (modelCost + voiceCost + videoCost).toFixed(1);
+                         })()}
+                       </p>
                    </div>
                 </div>
                 
@@ -278,43 +452,62 @@ const ReelTab: React.FC<ReelTabProps> = ({
         </div>
 
         <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar pr-2">
-          {reelResult ? (
+          {videoResult || reelResult ? (
             <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="flex flex-col md:flex-row gap-8 pb-20 px-4">
                <div className="w-full md:w-1/2 flex flex-col space-y-6">
-                  <div className="aspect-[9/16] bg-card/40 backdrop-blur-xl border-2 border-white/5 rounded-[3rem] overflow-hidden shadow-2xl relative group/reel">
-                    <img src={reelResult.imageUrl} alt="Reel Thumbnail" className="w-full h-full object-cover group-hover/reel:scale-110 transition-transform duration-700" />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover/reel:opacity-100 transition-opacity flex items-end p-8">
-                       <span className="text-[10px] font-black uppercase text-white tracking-widest border border-white/20 px-4 py-2 rounded-xl backdrop-blur-md">AI Generated Thumbnail</span>
+                  {videoResult ? (
+                    <div className={cn("rounded-[3rem] overflow-hidden bg-black border-2 border-white/5 shadow-2xl relative group/reel", videoAspectRatio === '9:16' ? 'aspect-[9/16]' : 'aspect-video')}>
+                      <video 
+                        src={videoResult.video.videoUrl} 
+                        controls 
+                        loop 
+                        playsInline 
+                        className="w-full h-full object-contain"
+                      />
+                      <div className="absolute top-6 right-6 z-10">
+                         <span className="text-[10px] font-black uppercase text-white tracking-widest border border-white/20 px-4 py-2 rounded-xl backdrop-blur-md bg-primary/40">
+                           {videoResult.video.modelUsed || 'Veo 3.1'} · AI Video
+                         </span>
+                      </div>
                     </div>
-                  </div>
+                  ) : (
+                    <div className="aspect-[9/16] bg-card/40 backdrop-blur-xl border-2 border-white/5 rounded-[3rem] overflow-hidden shadow-2xl relative group/reel">
+                      <img src={reelResult!.imageUrl} alt="Reel Thumbnail" className="w-full h-full object-cover group-hover/reel:scale-110 transition-transform duration-700" />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover/reel:opacity-100 transition-opacity flex items-end p-8">
+                         <span className="text-[10px] font-black uppercase text-white tracking-widest border border-white/20 px-4 py-2 rounded-xl backdrop-blur-md">AI Generated Thumbnail</span>
+                      </div>
+                    </div>
+                  )}
                   
-                  <div className="flex-1 border-4 border-dashed border-white/5 rounded-[3rem] bg-secondary/10 flex flex-col items-center justify-center p-10 text-center space-y-6 group/upload relative overflow-hidden group hover:border-primary/40 transition-all shadow-inner">
-                     {uploadedVideoUrl ? (
-                         <div className="space-y-4 relative z-10">
-                            <div className="bg-emerald-500/10 p-4 rounded-full border border-emerald-500/20 inline-block shadow-lg">
-                               <CheckCircle2 className="text-emerald-500" size={32} />
-                            </div>
-                            <h5 className="font-black text-xs uppercase tracking-widest text-emerald-500">Production Ready</h5>
-                            <Button onClick={() => setUploadedVideoUrl(null)} variant="ghost" className="text-[10px] font-black uppercase hover:bg-emerald-500/10">Swap Asset</Button>
-                         </div>
-                     ) : (
-                         <div className="relative z-10 flex flex-col items-center gap-4">
-                            <CloudUpload size={48} className="text-primary group-hover/upload:scale-110 transition-transform" />
-                            <div className="space-y-1">
-                               <p className="font-black text-sm uppercase tracking-widest">Connect Raw Footage</p>
-                               <p className="text-[10px] text-muted-foreground/60 font-bold italic leading-none">Sync your video with AI intelligence</p>
-                            </div>
-                            <input type="file" accept="video/*" onChange={handleVideoUpload} className="absolute inset-0 opacity-0 cursor-pointer" />
-                         </div>
-                     )}
-                     
-                     {isUploadingReel && (
-                         <div className="absolute inset-0 bg-background/90 backdrop-blur-xl flex flex-col items-center justify-center z-20">
-                            <RefreshCcw size={40} className="animate-spin text-primary" />
-                            <p className="font-black text-[10px] uppercase tracking-[0.2em] mt-4 opacity-60">Architecting Media...</p>
-                         </div>
-                     )}
-                  </div>
+                  {!videoResult && (
+                    <div className="flex-1 border-4 border-dashed border-white/5 rounded-[3rem] bg-secondary/10 flex flex-col items-center justify-center p-10 text-center space-y-6 group/upload relative overflow-hidden group hover:border-primary/40 transition-all shadow-inner">
+                       {uploadedVideoUrl ? (
+                           <div className="space-y-4 relative z-10">
+                              <div className="bg-emerald-500/10 p-4 rounded-full border border-emerald-500/20 inline-block shadow-lg">
+                                 <CheckCircle2 className="text-emerald-500" size={32} />
+                              </div>
+                              <h5 className="font-black text-xs uppercase tracking-widest text-emerald-500">Production Ready</h5>
+                              <Button onClick={() => setUploadedVideoUrl(null)} variant="ghost" className="text-[10px] font-black uppercase hover:bg-emerald-500/10">Swap Asset</Button>
+                           </div>
+                       ) : (
+                           <div className="relative z-10 flex flex-col items-center gap-4">
+                              <CloudUpload size={48} className="text-primary group-hover/upload:scale-110 transition-transform" />
+                              <div className="space-y-1">
+                                 <p className="font-black text-sm uppercase tracking-widest">Connect Raw Footage</p>
+                                 <p className="text-[10px] text-muted-foreground/60 font-bold italic leading-none">Sync your video with AI intelligence</p>
+                              </div>
+                              <input type="file" accept="video/*" onChange={handleVideoUpload} className="absolute inset-0 opacity-0 cursor-pointer" />
+                           </div>
+                       )}
+                       
+                       {isUploadingReel && (
+                           <div className="absolute inset-0 bg-background/90 backdrop-blur-xl flex flex-col items-center justify-center z-20">
+                              <RefreshCcw size={40} className="animate-spin text-primary" />
+                              <p className="font-black text-[10px] uppercase tracking-[0.2em] mt-4 opacity-60">Architecting Media...</p>
+                           </div>
+                       )}
+                    </div>
+                  )}
                </div>
 
                <div className="w-full md:w-1/2 space-y-8">
@@ -322,11 +515,11 @@ const ReelTab: React.FC<ReelTabProps> = ({
                     <div className="flex flex-col space-y-2">
                        <div className="flex justify-between items-center px-1">
                           <span className="text-[10px] font-black uppercase text-primary tracking-widest">Script & Direction</span>
-                          <span className="text-[10px] font-black text-muted-foreground uppercase opacity-40 italic">{reelResult.audioSuggestion}</span>
+                          <span className="text-[10px] font-black text-muted-foreground uppercase opacity-40 italic">{(videoResult ? videoResult.video.audioSuggestion : reelResult?.audioSuggestion) || 'AI Soundtrack'}</span>
                        </div>
                        <div className="p-8 bg-background/60 backdrop-blur-md rounded-[2rem] border-2 border-white/5 h-[400px] overflow-y-auto custom-scrollbar shadow-inner">
                           <div className="space-y-6">
-                             {reelResult.videoScript.split('\n').map((line, i) => (
+                             {((videoResult ? videoResult.video.videoScript : reelResult?.videoScript) || '').split('\n').map((line, i) => (
                                 <p key={i} className={cn("text-xs font-bold leading-relaxed", line.startsWith('[') ? "text-primary uppercase tracking-widest" : "text-muted-foreground/80")}>
                                    {line}
                                 </p>
@@ -336,7 +529,7 @@ const ReelTab: React.FC<ReelTabProps> = ({
                     </div>
 
                     <div className="flex flex-col gap-4 pt-4">
-                       <Button onClick={() => handleSave(PostStatus.SCHEDULED)} disabled={isProcessing || !uploadedVideoUrl} className="h-16 rounded-[1.25rem] font-black uppercase tracking-widest flex items-center justify-center gap-3 shadow-[0_15px_30px_rgba(var(--primary),0.3)]">
+                       <Button onClick={() => handleSave(PostStatus.SCHEDULED)} disabled={isProcessing || (!videoResult && !uploadedVideoUrl)} className="h-16 rounded-[1.25rem] font-black uppercase tracking-widest flex items-center justify-center gap-3 shadow-[0_15px_30px_rgba(var(--primary),0.3)]">
                          {isProcessing ? <RefreshCcw size={18} className="animate-spin" /> : <Send size={20} />}
                          Launch Final Reel
                        </Button>
@@ -345,7 +538,7 @@ const ReelTab: React.FC<ReelTabProps> = ({
                             <Save size={20} />
                             Save
                          </Button>
-                         <Button onClick={() => setReelResult(null)} variant="ghost" className="h-16 w-16 rounded-[1.25rem] text-rose-500 hover:bg-rose-500/10">
+                         <Button onClick={() => { setReelResult(null); setVideoResult(null); }} variant="ghost" className="h-16 w-16 rounded-[1.25rem] text-rose-500 hover:bg-rose-500/10">
                             <Trash2 size={24} />
                          </Button>
                        </div>

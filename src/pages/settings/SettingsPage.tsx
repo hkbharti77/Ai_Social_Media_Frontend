@@ -12,7 +12,13 @@ import {
   Lock,
   Globe,
   Smartphone,
-  CheckCircle2
+  CheckCircle2,
+  Film,
+  Zap,
+  Star,
+  ShoppingCart,
+  Loader2,
+  AlertTriangle
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
@@ -20,8 +26,20 @@ import { useAuth } from '../../context/useAuth';
 import { getProfile, type ProfileResponse } from '../../api/profile';
 import { getPaymentHistory, getUsageHistory, downloadReceiptPdf, type PaymentOrder, type CreditUsage } from '../../api/usage';
 import { useNavigate } from 'react-router-dom';
-import { History, FileText, Download, Zap, Heart } from 'lucide-react';
+import { History, FileText, Download, Heart } from 'lucide-react';
 import ReferralCard from '../../components/dashboard/ReferralCard';
+import {
+  getVideoCreditWalletApi,
+  getVideoCreditPacksByModelApi,
+  createVideoCreditOrderApi,
+  createCustomVideoCreditOrderApi,
+  verifyVideoCreditPaymentApi,
+  type VideoCreditWallet,
+  type VideoCreditPack,
+} from '../../api/videoCredits';
+import { cn } from '../../lib/utils';
+
+declare global { interface Window { Razorpay: any; } }
 
 const SettingsPage: React.FC = () => {
   const { user } = useAuth();
@@ -30,6 +48,17 @@ const SettingsPage: React.FC = () => {
   const [subscription, setSubscription] = useState<ProfileResponse['subscription'] | null>(null);
   const [payments, setPayments] = useState<PaymentOrder[]>([]);
   const [usage, setUsage] = useState<CreditUsage[]>([]);
+
+  // Video credits state
+  const [wallet, setWallet] = useState<VideoCreditWallet | null>(null);
+  const [walletLoading, setWalletLoading] = useState(false);
+  const [packs, setPacks] = useState<Record<string, VideoCreditPack[]>>({});
+  const [loadingPacks, setLoadingPacks] = useState<string | null>(null);
+  const [buyingPack, setBuyingPack] = useState<string | null>(null);
+  const [activeVideoModel, setActiveVideoModel] = useState<'veo-lite' | 'veo-fast' | 'veo-standard'>('veo-lite');
+  // Custom quantity
+  const [customQty, setCustomQty] = useState<string>('');
+  const [buyingCustom, setBuyingCustom] = useState(false);
 
   const fetchData = async () => {
     try {
@@ -51,13 +80,120 @@ const SettingsPage: React.FC = () => {
     fetchData();
   }, []);
 
+  const fetchWallet = async () => {
+    setWalletLoading(true);
+    try {
+      const data = await getVideoCreditWalletApi();
+      setWallet(data);
+    } catch { /* silent */ }
+    finally { setWalletLoading(false); }
+  };
+
+  const fetchPacksForModel = async (modelId: string) => {
+    if (packs[modelId]) return;
+    setLoadingPacks(modelId);
+    try {
+      const data = await getVideoCreditPacksByModelApi(modelId);
+      setPacks(prev => ({ ...prev, [modelId]: data }));
+    } catch { toast.error('Failed to load packs'); }
+    finally { setLoadingPacks(null); }
+  };
+
+  React.useEffect(() => {
+    if (activeSection === 'video_credits') {
+      fetchWallet();
+      fetchPacksForModel(activeVideoModel);
+    }
+  }, [activeSection]);
+
+  React.useEffect(() => {
+    if (activeSection === 'video_credits') fetchPacksForModel(activeVideoModel);
+  }, [activeVideoModel]);
+
+  const handleBuyPack = async (pack: VideoCreditPack) => {
+    setBuyingPack(pack.packName);
+    try {
+      const order = await createVideoCreditOrderApi(pack.packName);
+      const options = {
+        key: order.key_id,
+        amount: order.amount,
+        currency: order.currency,
+        name: 'VaniAI Video Credits',
+        description: pack.displayName,
+        order_id: order.order_id,
+        handler: async (response: any) => {
+          try {
+            await verifyVideoCreditPaymentApi(response.razorpay_order_id, response.razorpay_payment_id, response.razorpay_signature);
+            toast.success(`✅ ${pack.videoCount} video credits added!`);
+            fetchWallet();
+          } catch { toast.error('Payment verification failed.'); }
+        },
+        theme: { color: '#6366f1' },
+        modal: { ondismiss: () => toast.info('Payment cancelled') },
+      };
+      new window.Razorpay(options).open();
+    } catch (e: any) {
+      toast.error(e?.response?.data?.error || 'Failed to create order');
+    } finally { setBuyingPack(null); }
+  };
+
+  const handleBuyCustom = async () => {
+    const qty = parseInt(customQty);
+    if (!qty || qty < 1 || qty > 500) {
+      toast.error('Enter a number between 1 and 500');
+      return;
+    }
+    setBuyingCustom(true);
+    try {
+      const order = await createCustomVideoCreditOrderApi(activeVideoModel, qty);
+      const pricePerVideo: Record<string, number> = { 'veo-lite': 55, 'veo-fast': 140, 'veo-standard': 470 }; // pack prices from VideoCreditPack.java
+      const options = {
+        key: order.key_id,
+        amount: order.amount,
+        currency: order.currency,
+        name: 'VaniAI Video Credits',
+        description: `${qty} custom ${activeVideoModel} credits`,
+        order_id: order.order_id,
+        handler: async (response: any) => {
+          try {
+            await verifyVideoCreditPaymentApi(response.razorpay_order_id, response.razorpay_payment_id, response.razorpay_signature);
+            toast.success(`✅ ${qty} video credits added!`);
+            setCustomQty('');
+            fetchWallet();
+          } catch { toast.error('Payment verification failed.'); }
+        },
+        theme: { color: '#6366f1' },
+        modal: { ondismiss: () => toast.info('Payment cancelled') },
+      };
+      new window.Razorpay(options).open();
+    } catch (e: any) {
+      toast.error(e?.response?.data?.error || 'Failed to create order');
+    } finally { setBuyingCustom(false); }
+  };
+
+  // Tier-based accessible models
+  const tierName = subscription?.tier?.toLowerCase().replace('_', ' ') || 'free';
+  const accessibleModels: { id: 'veo-lite' | 'veo-fast' | 'veo-standard'; label: string; icon: React.ReactNode; color: string; bg: string; border: string; balance: number }[] = [
+    { id: 'veo-lite',     label: 'Veo Lite',     icon: <Film size={18} />,  color: 'text-emerald-400', bg: 'bg-emerald-400/10', border: 'border-emerald-500/20', balance: wallet?.lite ?? 0 },
+    { id: 'veo-fast',     label: 'Veo Fast',     icon: <Zap size={18} />,   color: 'text-blue-400',    bg: 'bg-blue-400/10',    border: 'border-blue-500/20',    balance: wallet?.fast ?? 0 },
+    { id: 'veo-standard', label: 'Veo Standard', icon: <Star size={18} />,  color: 'text-purple-400',  bg: 'bg-purple-400/10',  border: 'border-purple-500/20',  balance: wallet?.standard ?? 0 },
+  ].filter(m => {
+    if (['standard'].includes(tierName)) return m.id === 'veo-lite';
+    if (['pro'].includes(tierName)) return m.id !== 'veo-standard';
+    if (['super pro', 'superpro'].includes(tierName)) return true;
+    return false;
+  });
+
+  const isVideoEligible = ['standard', 'pro', 'super pro', 'superpro'].includes(tierName);
+
   const sections = [
     { id: 'account', title: 'Account Settings', desc: 'Secure and personalize your profile.', icon: User, color: 'text-blue-400' },
-      { id: 'billing', title: 'Subscription & Billing', desc: 'Enterprise plan and invoices.', icon: CreditCard, color: 'text-emerald-400' },
-      { id: 'referral', title: 'Refer & Earn', desc: 'Secure 50 bonus credits for every verified pioneer.', icon: Heart, color: 'text-rose-400' },
-      { id: 'usage', title: 'Usage Activity', desc: 'Real-time ledger of AI credit consumption.', icon: History, color: 'text-orange-400' },
+    { id: 'billing', title: 'Subscription & Billing', desc: 'Enterprise plan and invoices.', icon: CreditCard, color: 'text-emerald-400' },
+    ...(isVideoEligible ? [{ id: 'video_credits', title: 'Video Credits', desc: 'Buy Veo video credits for your wallet.', icon: Film, color: 'text-purple-400' }] : []),
+    { id: 'referral', title: 'Refer & Earn', desc: 'Secure 50 bonus credits for every verified pioneer.', icon: Heart, color: 'text-rose-400' },
+    { id: 'usage', title: 'Usage Activity', desc: 'Real-time ledger of AI credit consumption.', icon: History, color: 'text-orange-400' },
     { id: 'notifications', title: 'Alert Preferences', desc: 'Customize your real-time notification lab.', icon: Bell, color: 'text-amber-400' },
-    { id: 'api', title: 'API & Integrations', desc: 'Connect to external neural networks.', icon: ShieldCheck, color: 'text-purple-400' },
+    { id: 'api', title: 'API & Integrations', desc: 'Connect to external neural networks.', icon: ShieldCheck, color: 'text-indigo-400' },
   ];
 
   const handleSave = () => {
@@ -101,6 +237,172 @@ const SettingsPage: React.FC = () => {
             </div>
           </div>
         );
+      case 'video_credits':
+        return (
+          <div className="space-y-8">
+            {/* No video access message */}
+            {accessibleModels.length === 0 && (
+              <div className="flex flex-col items-center justify-center py-16 space-y-4 bg-white/5 rounded-[2rem] border-2 border-dashed border-white/10">
+                <Film size={48} className="text-muted-foreground/30" />
+                <div className="text-center space-y-2">
+                  <h4 className="font-black text-xl tracking-tighter">No Video Access</h4>
+                  <p className="text-muted-foreground font-medium opacity-60 max-w-xs">
+                    Video credits are available on Standard, Pro, and Super Pro plans.
+                  </p>
+                </div>
+                <Button onClick={() => navigate('/pricing')} className="mt-2">Upgrade Plan</Button>
+              </div>
+            )}
+
+            {accessibleModels.length > 0 && (
+              <>
+                {/* Wallet warnings */}
+                {wallet?.warnings && wallet.warnings.length > 0 && (
+                  <div className="space-y-2">
+                    {wallet.warnings.map((w, i) => (
+                      <div key={i} className="flex items-start gap-3 p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-400 text-sm font-bold">
+                        <AlertTriangle size={16} className="shrink-0 mt-0.5" />
+                        <span>{w}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Wallet balance cards */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {accessibleModels.map(m => (
+                    <div key={m.id} className={cn('p-6 rounded-[1.5rem] border-2', m.bg, m.border)}>
+                      <div className="flex items-center gap-2 mb-3">
+                        <span className={m.color}>{m.icon}</span>
+                        <p className={cn('text-[11px] font-black uppercase tracking-widest', m.color)}>{m.label}</p>
+                      </div>
+                      <p className={cn('text-4xl font-black tracking-tighter', m.balance === 0 ? 'text-rose-400' : m.balance <= 2 ? 'text-amber-400' : m.color)}>
+                        {walletLoading ? '...' : m.balance}
+                      </p>
+                      <p className="text-[10px] text-muted-foreground font-bold mt-1">credits remaining</p>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Model tab selector */}
+                <div className="space-y-6">
+                  <div className="flex bg-secondary/20 p-1.5 rounded-2xl border border-white/5 gap-1">
+                    {accessibleModels.map(m => (
+                      <button
+                        key={m.id}
+                        onClick={() => setActiveVideoModel(m.id)}
+                        className={cn(
+                          'flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all',
+                          activeVideoModel === m.id
+                            ? cn('bg-background shadow-lg', m.color)
+                            : 'text-muted-foreground hover:text-foreground'
+                        )}
+                      >
+                        <span>{m.icon}</span>
+                        {m.label}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Packs grid */}
+                  {loadingPacks === activeVideoModel ? (
+                    <div className="flex justify-center py-12">
+                      <Loader2 size={32} className="animate-spin text-primary" />
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      {(packs[activeVideoModel] || []).map(pack => {
+                        const modelCfg = accessibleModels.find(m => m.id === activeVideoModel)!;
+                        const isBuying = buyingPack === pack.packName;
+                        return (
+                          <motion.button
+                            key={pack.packName}
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.98 }}
+                            onClick={() => handleBuyPack(pack)}
+                            disabled={isBuying}
+                            className={cn(
+                              'flex flex-col items-start p-5 rounded-[1.5rem] border-2 bg-card/40 hover:bg-white/5 transition-all text-left relative overflow-hidden group',
+                              modelCfg.border,
+                              isBuying && 'opacity-50 cursor-not-allowed'
+                            )}
+                          >
+                            <div className={cn('absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity', modelCfg.color)}>
+                              <ShoppingCart size={48} />
+                            </div>
+                            <div className={cn('flex items-center gap-1.5 mb-3 text-[10px] font-black uppercase tracking-widest', modelCfg.color)}>
+                              {modelCfg.icon}
+                              {pack.packType === 'Manual' ? 'Manual' : 'Pack'}
+                            </div>
+                            <p className="text-2xl font-black tracking-tighter text-foreground">
+                              {pack.videoCount} video{pack.videoCount > 1 ? 's' : ''}
+                            </p>
+                            <p className="text-xl font-black text-primary mt-1">₹{pack.priceInr}</p>
+                            <p className="text-[10px] text-muted-foreground font-bold mt-1">{pack.pricePerVideo}/video</p>
+                            {isBuying && (
+                              <div className="absolute inset-0 bg-background/80 flex items-center justify-center rounded-[1.5rem]">
+                                <Loader2 size={24} className="animate-spin text-primary" />
+                              </div>
+                            )}
+                          </motion.button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+
+                  {/* Custom quantity section */}
+                  <div className="mt-6 p-6 rounded-[1.5rem] border-2 border-white/10 bg-white/5 space-y-4">
+                    <div>
+                      <p className="text-[11px] font-black uppercase tracking-widest text-muted-foreground mb-1">Custom Quantity</p>
+                      <p className="text-[10px] text-muted-foreground/60 font-bold">Enter any number of credits you want to buy</p>
+                    </div>
+                    <div className="flex gap-3 items-end">
+                      <div className="flex-1 space-y-2">
+                        <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+                          Number of videos
+                        </label>
+                        <input
+                          type="number"
+                          min={1}
+                          max={500}
+                          value={customQty}
+                          onChange={e => setCustomQty(e.target.value)}
+                          placeholder="e.g. 7"
+                          className="w-full bg-background/60 border-2 border-white/10 focus:border-primary/50 rounded-2xl px-5 py-4 text-lg font-black outline-none transition-all"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Total</p>
+                        <div className="px-5 py-4 bg-primary/10 border-2 border-primary/20 rounded-2xl min-w-[100px] text-center">
+                          <p className="text-lg font-black text-primary">
+                            {customQty && parseInt(customQty) > 0
+                              ? `₹${parseInt(customQty) * ({'veo-lite': 55, 'veo-fast': 140, 'veo-standard': 470}[activeVideoModel as 'veo-lite' | 'veo-fast' | 'veo-standard'] || 55)}`
+                              : '₹0'}
+                          </p>
+                        </div>
+                      </div>
+                      <Button
+                        onClick={handleBuyCustom}
+                        disabled={buyingCustom || !customQty || parseInt(customQty) < 1}
+                        className="h-[58px] px-6 rounded-2xl font-black"
+                      >
+                        {buyingCustom ? <Loader2 size={18} className="animate-spin" /> : <ShoppingCart size={18} />}
+                      </Button>
+                    </div>
+                    <p className="text-[10px] text-muted-foreground/50 font-bold">
+                      Price: ₹{({'veo-lite': 55, 'veo-fast': 140, 'veo-standard': 470} as Record<string, number>)[activeVideoModel]}/video · Max 500 per order
+                    </p>
+                  </div>
+
+                <p className="text-center text-[10px] text-muted-foreground/40 font-bold">
+                  Video credits never expire · Secured by Razorpay
+                </p>
+              </>
+            )}
+          </div>
+        );
+
       case 'billing':
         return (
           <div className="space-y-10">
@@ -132,19 +434,33 @@ const SettingsPage: React.FC = () => {
                         <FileText size={20} />
                       </div>
                       <div>
-                        <p className="font-bold text-lg">{pay.targetTier} Plan Renewal</p>
-                        <p className="text-[10px] text-muted-foreground uppercase font-black tracking-widest">{new Date(pay.completedAt || pay.createdAt).toLocaleDateString()} • {pay.razorpayPaymentId}</p>
+                        <p className="font-bold text-lg">
+                          {pay.targetTier
+                            ? pay.targetTier.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, c => c.toUpperCase()) + ' Plan Renewal'
+                            : 'Video Credits Purchase'}
+                        </p>
+                        <p className="text-[10px] text-muted-foreground uppercase font-black tracking-widest">
+                          {new Date(pay.completedAt || pay.createdAt).toLocaleDateString()} · {pay.razorpayPaymentId || pay.razorpayOrderId}
+                        </p>
                       </div>
                     </div>
                     <div className="flex items-center justify-between w-full md:w-auto gap-8">
                       <span className="text-xl font-black tracking-tight text-emerald-400">₹{pay.amount / 100}</span>
-                      <Button 
-                        variant="ghost" 
-                        onClick={() => downloadReceiptPdf(pay.razorpayOrderId)}
-                        className="h-10 rounded-lg text-primary hover:bg-primary/5 font-bold flex items-center gap-2"
-                      >
-                        <Download size={16} /> Receipt
-                      </Button>
+                      {pay.status === 'COMPLETED' && (
+                        <Button 
+                          variant="ghost" 
+                          onClick={async () => {
+                            try {
+                              await downloadReceiptPdf(pay.razorpayOrderId);
+                            } catch {
+                              toast.error('Receipt not available for this order');
+                            }
+                          }}
+                          className="h-10 rounded-lg text-primary hover:bg-primary/5 font-bold flex items-center gap-2"
+                        >
+                          <Download size={16} /> Receipt
+                        </Button>
+                      )}
                     </div>
                   </div>
                 )) : (

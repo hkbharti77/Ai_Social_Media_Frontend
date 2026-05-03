@@ -68,6 +68,18 @@ const DashboardPage: React.FC = () => {
   useEffect(() => {
     fetchPosts();
     fetchInsights();
+
+    // Poll for post status updates every 30 seconds
+    const pollInterval = setInterval(() => {
+      // Only refresh posts data, not everything
+      getPostsApi().then(postsData => {
+        setPosts(postsData);
+      }).catch(err => {
+        console.error('Failed to poll posts', err);
+      });
+    }, 30000); // 30 seconds
+
+    return () => clearInterval(pollInterval);
   }, []);
 
   const fetchInsights = async () => {
@@ -119,9 +131,11 @@ const DashboardPage: React.FC = () => {
     ? safePosts
     : activeTab === 'Evergreen'
     ? safePosts.filter(post => post.isEvergreen)
+    : activeTab === 'Videos'
+    ? safePosts.filter(post => post.isReel || post.videoUrl)
     : safePosts.filter(post => post.status === activeTab.toUpperCase());
 
-  const tabs = ['All', 'Draft', 'Scheduled', 'Published', 'Evergreen', 'Failed'];
+  const tabs = ['All', 'Draft', 'Scheduled', 'Published', 'Videos', 'Evergreen', 'Failed'];
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -156,7 +170,20 @@ const DashboardPage: React.FC = () => {
     try {
       await deletePostApi(postTargetId);
       toast.success("Post removed from archive");
-      fetchPosts();
+      // Optimistically update UI without full refresh
+      setPosts(prevPosts => prevPosts.filter(post => post.id !== postTargetId));
+      // Update stats
+      const deletedPost = posts.find(p => p.id === postTargetId);
+      if (deletedPost) {
+        setStats(prevStats => {
+          const newStats = { ...prevStats };
+          if (deletedPost.status === 'DRAFT') newStats.draftCount = Math.max(0, newStats.draftCount - 1);
+          else if (deletedPost.status === 'SCHEDULED') newStats.scheduledCount = Math.max(0, newStats.scheduledCount - 1);
+          else if (deletedPost.status === 'PUBLISHED') newStats.publishedCount = Math.max(0, newStats.publishedCount - 1);
+          else if (deletedPost.status === 'FAILED') newStats.failedCount = Math.max(0, newStats.failedCount - 1);
+          return newStats;
+        });
+      }
       setIsDeleteModalOpen(false);
     } catch {
       toast.error("Failed to delete post");
@@ -176,7 +203,20 @@ const DashboardPage: React.FC = () => {
     try {
       await approveDraftApi(id);
       toast.success('Post approved & scheduled for IST slot.');
-      fetchPosts();
+      // Optimistically update the post status without full refresh
+      setPosts(prevPosts => 
+        prevPosts.map(post => 
+          post.id === id 
+            ? { ...post, status: 'SCHEDULED' as const }
+            : post
+        )
+      );
+      // Update stats
+      setStats(prevStats => ({
+        ...prevStats,
+        draftCount: Math.max(0, prevStats.draftCount - 1),
+        scheduledCount: prevStats.scheduledCount + 1
+      }));
     } catch {
       toast.error('Failed to approve post.');
     }
@@ -405,13 +445,13 @@ const DashboardPage: React.FC = () => {
         {/* Content Explorer Section */}
         <div className="space-y-10">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 border-b-2 border-white/5 pb-8">
-            <div className="flex gap-10 overflow-x-auto scrollbar-hide">
+            <div className="flex gap-10 flex-wrap">
               {tabs.map((tab) => (
                 <button
                   key={tab}
                   onClick={() => setActiveTab(tab)}
                   className={cn(
-                    "pb-1 px-2 text-xs font-black uppercase tracking-[0.3em] transition-all relative whitespace-nowrap",
+                    "pb-4 px-2 text-xs font-black uppercase tracking-[0.3em] transition-all relative whitespace-nowrap",
                     activeTab === tab ? "text-primary scale-110" : "text-muted-foreground/60 hover:text-foreground"
                   )}
                 >
@@ -419,7 +459,7 @@ const DashboardPage: React.FC = () => {
                   {activeTab === tab && (
                     <motion.div 
                       layoutId="activeTabDashboardGlow"
-                      className="absolute -bottom-[34px] left-0 right-0 h-1.5 bg-primary rounded-t-full shadow-[0_-8px_20px_rgba(var(--primary),0.6)]" 
+                      className="absolute bottom-0 left-0 right-0 h-1.5 bg-primary rounded-t-full shadow-[0_-8px_20px_rgba(var(--primary),0.6)]" 
                     />
                   )}
                 </button>

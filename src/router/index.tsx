@@ -17,6 +17,11 @@ import EvergreenPage from '../pages/evergreen/EvergreenPage';
 import AdminDashboard from '../pages/admin/AdminDashboard';
 import AdminTokenAudit from '../pages/admin/AdminTokenAudit';
 import AdminUserDirectory from '../pages/admin/AdminUserDirectory';
+import AdminUserManagement from '../pages/admin/AdminUserManagement';
+import AdminSystemStats from '../pages/admin/AdminSystemStats';
+import AdminFraudManagement from '../pages/admin/AdminFraudManagement';
+import AdminPayments from '../pages/admin/AdminPayments';
+import AdminBroadcast from '../pages/admin/AdminBroadcast';
 import CommunityDashboard from '../pages/community/CommunityDashboard';
 import CalendarPage from '../pages/calendar/CalendarPage';
 import ReferralPage from '../pages/referral/ReferralPage';
@@ -104,6 +109,26 @@ export const router = createBrowserRouter([
       {
         path: '/admin/users',
         element: <AdminUserDirectory />,
+      },
+      {
+        path: '/admin/user-management',
+        element: <AdminUserManagement />,
+      },
+      {
+        path: '/admin/system-stats',
+        element: <AdminSystemStats />,
+      },
+      {
+        path: '/admin/fraud',
+        element: <AdminFraudManagement />,
+      },
+      {
+        path: '/admin/payments',
+        element: <AdminPayments />,
+      },
+      {
+        path: '/admin/broadcast',
+        element: <AdminBroadcast />,
       },
       {
         path: '/referral',

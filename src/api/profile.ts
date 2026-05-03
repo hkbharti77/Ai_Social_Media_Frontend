@@ -74,6 +74,10 @@ export interface ProfileResponse {
     referralCode?: string;
     bonusCredits: number;
     dailyAdsViewed: number;
+    // Video credit wallet
+    videoCreditLite: number;
+    videoCreditFast: number;
+    videoCreditStandard: number;
   };
 }
 

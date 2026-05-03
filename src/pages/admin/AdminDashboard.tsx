@@ -25,6 +25,7 @@ import { getAdminStats, getAdminModelStats, getUserIntelligence, type AdminStats
 import { useAuth } from '../../context/useAuth';
 import axios from '../../api/axios';
 import { toast } from 'sonner';
+import PageWrapper from '../../components/layout/PageWrapper';
 
 const AdminDashboard: React.FC = () => {
     const [stats, setStats] = useState<AdminStats | null>(null);
@@ -88,7 +89,8 @@ const AdminDashboard: React.FC = () => {
     }
 
     return (
-        <div className="p-8 space-y-8 bg-[#030303] min-h-screen text-white/90">
+        <PageWrapper>
+            <div className="p-8 space-y-8 min-h-screen">
             {/* Header */}
             <header className="flex justify-between items-end">
                 <div>
@@ -306,7 +308,8 @@ const AdminDashboard: React.FC = () => {
                     </div>
                 </div>
             </div>
-        </div>
+            </div>
+        </PageWrapper>
     );
 };
 

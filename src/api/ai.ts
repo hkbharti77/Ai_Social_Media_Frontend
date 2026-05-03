@@ -12,9 +12,17 @@ export interface PostGenerationRequest {
   command: string;
   count: number;
   modelId?: string;
+  videoModelId?: string;       // Veo model: "veo-lite" | "veo-fast" | "veo-standard"
   aspectRatio?: string;
   voiceMode?: string;
   contentType?: 'MARKETING' | 'EDUCATIONAL';
+  generateActualVideo?: boolean;
+}
+
+export interface VideoGenerationRequest extends PostGenerationRequest {
+  generateActualVideo: true;
+  aspectRatio: string;
+  videoModelId: string;
 }
 
 export interface GenerationResponse {
@@ -168,6 +176,32 @@ export interface ReelResponse {
 
 export const generateReelApi = async (data: PostGenerationRequest): Promise<ReelResponse> => {
   const response = await axiosInstance.post<ReelResponse>('/ai/reel', data);
+  return response.data;
+};
+
+export interface VideoGenerationResponse {
+  video: {
+    videoUrl: string;
+    caption: string;
+    hashtags: string[];
+    videoScript: string;
+    imageUrl: string;
+    audioSuggestion: string;
+    generationMode: 'VEO_ACTUAL' | 'SCRIPT_ONLY';
+    modelUsed: string;
+  };
+  wasExtraCharge: boolean;
+  creditDeducted?: string;
+  wallet: {
+    lite: number;
+    fast: number;
+    standard: number;
+    warnings: string[];
+  };
+}
+
+export const generateVideoApi = async (data: VideoGenerationRequest): Promise<VideoGenerationResponse> => {
+  const response = await axiosInstance.post<VideoGenerationResponse>('/ai/reel', data);
   return response.data;
 };
 export interface CampaignGenerationRequest {

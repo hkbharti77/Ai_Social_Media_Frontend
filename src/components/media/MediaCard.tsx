@@ -30,11 +30,22 @@ const MediaCard: React.FC<MediaCardProps> = ({ asset, viewMode, onDeleteClick })
         'relative overflow-hidden bg-secondary/20',
         viewMode === 'grid' ? 'aspect-square' : 'h-full w-48 shrink-0'
       )}>
-        <img
-          src={asset.url}
-          alt="AI Visual"
-          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
-        />
+        {asset.url.toLowerCase().endsWith('.mp4') ? (
+          <video
+            src={asset.url}
+            className="w-full h-full object-cover"
+            muted
+            onMouseOver={(e) => (e.target as HTMLVideoElement).play()}
+            onMouseOut={(e) => (e.target as HTMLVideoElement).pause()}
+            loop
+          />
+        ) : (
+          <img
+            src={asset.url}
+            alt="AI Visual"
+            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+          />
+        )}
         <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-4 backdrop-blur-[2px]">
           <a
             href={asset.url}

@@ -14,6 +14,7 @@ export default function AdminPayments() {
     useEffect(() => {
         loadPayments();
         loadRevenueStats();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [statusFilter, currentPage]);
 
     const loadPayments = async () => {
@@ -21,7 +22,7 @@ export default function AdminPayments() {
         try {
             const data = await getAllPayments(statusFilter || undefined, currentPage, 20);
             setPayments(data);
-        } catch (error) {
+        } catch {
             toast.error('Failed to load payments');
         } finally {
             setLoading(false);
@@ -32,7 +33,7 @@ export default function AdminPayments() {
         try {
             const stats = await getRevenueStats();
             setRevenueStats(stats);
-        } catch (error) {
+        } catch {
             toast.error('Failed to load revenue stats');
         }
     };

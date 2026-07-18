@@ -1,17 +1,21 @@
-export enum SupportTicketStatus {
-  OPEN = 'OPEN',
-  IN_PROGRESS = 'IN_PROGRESS',
-  RESOLVED = 'RESOLVED',
-  CLOSED = 'CLOSED',
-}
+export const SupportTicketStatus = {
+  OPEN: 'OPEN',
+  IN_PROGRESS: 'IN_PROGRESS',
+  RESOLVED: 'RESOLVED',
+  CLOSED: 'CLOSED',
+} as const;
 
-export enum SupportTicketPriority {
-  LOW = 'LOW',
-  MEDIUM = 'MEDIUM',
-  HIGH = 'HIGH',
-  URGENT = 'URGENT',
-  CRITICAL = 'CRITICAL',
-}
+export type SupportTicketStatus = typeof SupportTicketStatus[keyof typeof SupportTicketStatus];
+
+export const SupportTicketPriority = {
+  LOW: 'LOW',
+  MEDIUM: 'MEDIUM',
+  HIGH: 'HIGH',
+  URGENT: 'URGENT',
+  CRITICAL: 'CRITICAL',
+} as const;
+
+export type SupportTicketPriority = typeof SupportTicketPriority[keyof typeof SupportTicketPriority];
 
 export interface SupportTicketRequest {
   subject: string;

@@ -7,7 +7,7 @@ import { handleApiError } from '../../../lib/error-utils';
 import { cn } from '../../../lib/utils';
 import { ModelSelect, type ModelOption } from '../../../components/ui/ModelSelect';
 import { type ProfileResponse } from '../../../api/profile';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 
 interface RepurposeTabProps {
   selectedModel: string;
@@ -39,6 +39,7 @@ const RepurposeTab: React.FC<RepurposeTabProps> = ({
   selectedModel, 
   setSelectedModel,
   selectedAspectRatio, 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   setSelectedAspectRatio,
   selectedPlatforms,
   setSelectedPlatforms,

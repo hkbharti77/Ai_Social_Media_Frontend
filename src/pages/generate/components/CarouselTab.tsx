@@ -35,6 +35,7 @@ interface CarouselTabProps {
   onSchedule: (post: GeneratedPost, index: number) => void;
   onDelete: (index: number) => void;
   onPredict: (draft: string, index: number) => void;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   onSaveThread: (thread: string[], status: any) => void;
   processingId: string | null;
   isPredicting: Record<number, boolean>;
@@ -44,6 +45,7 @@ const CarouselTab: React.FC<CarouselTabProps> = ({
   selectedModel, 
   setSelectedModel,
   selectedAspectRatio,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   setSelectedAspectRatio,
   selectedPlatforms,
   setSelectedPlatforms,
@@ -88,6 +90,7 @@ const CarouselTab: React.FC<CarouselTabProps> = ({
       setCarouselResult(response);
       toast.success(`Successfully generated a ${response.slides.length}-slide carousel!`);
       onSuccess();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
       if (error.response?.status === 402) {
         onUpgradeRequired("You've reached your credit limit!");

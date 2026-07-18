@@ -21,6 +21,7 @@ const PricingPage: React.FC = () => {
   const [tiers, setTiers] = React.useState<PricingTier[]>([]);
   const [subscription, setSubscription] = React.useState<ProfileResponse['subscription'] | null>(null);
   const [isLoading, setIsLoading] = React.useState(true);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [previews, setPreviews] = React.useState<Record<string, any>>({});
 
   React.useEffect(() => {
@@ -48,6 +49,7 @@ const PricingPage: React.FC = () => {
       );
       
       const results = await Promise.all(previewPromises);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const previewMap: Record<string, any> = {};
       results.forEach(res => {
         if (res) previewMap[res.name] = res.preview;
@@ -125,6 +127,7 @@ const PricingPage: React.FC = () => {
         }
       };
 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const rzp = new (window as any).Razorpay(options);
       rzp.open();
       

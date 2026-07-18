@@ -7,7 +7,7 @@ import { handleApiError } from '../../../lib/error-utils';
 import { cn } from '../../../lib/utils';
 import { ModelSelect, type ModelOption } from '../../../components/ui/ModelSelect';
 import { type ProfileResponse } from '../../../api/profile';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { PostStatus } from '../../../api/posts';
 
 interface CreationTabProps {
@@ -35,6 +35,7 @@ interface CreationTabProps {
   onSchedule: (post: GeneratedPost, index: number) => void;
   onDelete: (index: number) => void;
   onPredict: (draft: string, index: number) => void;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   onSaveThread: (thread: string[], status: any) => void;
   processingId: string | null;
   isPredicting: Record<number, boolean>;
@@ -241,6 +242,7 @@ const CreationTab: React.FC<CreationTabProps> = ({
               ].map((m) => (
                 <button
                   key={m.id}
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
                   onClick={() => setContentType(m.id as any)}
                   className={cn(
                     "flex-1 py-2 rounded-lg text-[10px] font-black uppercase transition-all",

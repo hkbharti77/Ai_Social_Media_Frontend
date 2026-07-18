@@ -17,13 +17,14 @@ const AdRewardCard: React.FC<AdRewardCardProps> = ({ dailyAdsViewed, onRewardCla
   const [isClaiming, setIsClaiming] = useState(false);
 
   useEffect(() => {
-    let timer: any;
+    let timer: ReturnType<typeof setInterval>;
     if (isWatching && timeLeft > 0) {
       timer = setInterval(() => setTimeLeft((prev) => prev - 1), 1000);
     } else if (isWatching && timeLeft === 0) {
       handleComplete();
     }
     return () => clearInterval(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isWatching, timeLeft]);
 
   const handleStartWatching = async () => {
@@ -36,7 +37,7 @@ const AdRewardCard: React.FC<AdRewardCardProps> = ({ dailyAdsViewed, onRewardCla
       await startAdSessionApi();
       setIsWatching(true);
       setTimeLeft(30);
-    } catch (err) {
+    } catch {
       toast.error("Failed to sync ad session. Please try again.");
     }
   };
@@ -150,6 +151,6 @@ const AdRewardCard: React.FC<AdRewardCardProps> = ({ dailyAdsViewed, onRewardCla
   );
 };
 
-const cn = (...classes: any[]) => classes.filter(Boolean).join(' ');
+const cn = (...classes: unknown[]) => classes.filter(Boolean).join(' ');
 
 export default AdRewardCard;

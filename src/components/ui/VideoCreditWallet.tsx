@@ -15,6 +15,7 @@ import { toast } from 'sonner';
 
 declare global {
   interface Window {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     Razorpay: any;
   }
 }
@@ -50,6 +51,7 @@ const VideoCreditWalletComponent: React.FC<VideoCreditWalletProps> = ({ userTier
 
   useEffect(() => {
     fetchWallet();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const fetchWallet = async () => {
@@ -95,6 +97,7 @@ const VideoCreditWalletComponent: React.FC<VideoCreditWalletProps> = ({ userTier
         name: 'VaniAI Video Credits',
         description: pack.displayName,
         order_id: order.order_id,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         handler: async (response: any) => {
           try {
             await verifyVideoCreditPaymentApi(
@@ -114,6 +117,7 @@ const VideoCreditWalletComponent: React.FC<VideoCreditWalletProps> = ({ userTier
 
       const rzp = new window.Razorpay(options);
       rzp.open();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
       toast.error(err?.response?.data?.error || 'Failed to create order');
     } finally {

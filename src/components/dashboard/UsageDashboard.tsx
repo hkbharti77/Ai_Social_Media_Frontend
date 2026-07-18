@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Cpu, Zap, Activity, Info, BarChart3, Database, ChevronDown } from 'lucide-react';
+import { Cpu, Activity, Info, BarChart3, Database, ChevronDown } from 'lucide-react';
 import { getAiUsageSummary, type AiUsageSummary } from '../../api/usage';
 import { cn } from '../../lib/utils';
 

@@ -3,7 +3,7 @@ import PageWrapper from '../../components/layout/PageWrapper';
 import { getAllTicketsApi, updateTicketStatusApi, replyToTicketApi } from '../../api/supportTicket.api';
 import type { SupportTicketResponse } from '../../types/support-ticket.types';
 import { SupportTicketStatus } from '../../types/support-ticket.types';
-import { Loader2, Ticket, Search, CheckCircle2, MessageCircle, Send, X } from 'lucide-react';
+import { Loader2, CheckCircle2, MessageCircle, Send, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '../../lib/utils';
 import { Button } from '../../components/ui/Button';
@@ -26,7 +26,7 @@ const AdminSupportTickets: React.FC = () => {
     try {
       const data = await getAllTicketsApi();
       setTickets(data);
-    } catch (error) {
+    } catch {
       toast.error('Failed to load tickets.');
     } finally {
       setIsLoading(false);
@@ -43,7 +43,7 @@ const AdminSupportTickets: React.FC = () => {
       const updated = await updateTicketStatusApi(id, status);
       setTickets(tickets.map(t => t.id === id ? updated : t));
       toast.success('Ticket status updated.');
-    } catch (error) {
+    } catch {
       toast.error('Failed to update status.');
     } finally {
       setUpdatingId(null);
@@ -59,7 +59,7 @@ const AdminSupportTickets: React.FC = () => {
       toast.success('Reply sent successfully!');
       setIsReplyModalOpen(false);
       setReplyMessage('');
-    } catch (error) {
+    } catch {
       toast.error('Failed to send reply.');
     } finally {
       setIsSendingReply(false);

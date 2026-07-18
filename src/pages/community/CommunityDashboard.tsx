@@ -17,7 +17,7 @@ import {
   Hash
 } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
-import { motion, AnimatePresence } from 'framer-motion';
+
 import { cn } from '../../lib/utils';
 import { getInboxApi, syncCommentsApi, draftReplyApi, sendReplyApi } from '../../api/community';
 import type { Comment } from '../../api/community';
@@ -37,6 +37,7 @@ const CommunityDashboard: React.FC = () => {
 
   useEffect(() => {
     fetchInbox();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filterSentiment]);
 
   const fetchInbox = async () => {
@@ -48,7 +49,7 @@ const CommunityDashboard: React.FC = () => {
         setSelectedComment(data[0]);
         setReplyText(data[0].aiDraftReply || '');
       }
-    } catch (error) {
+    } catch {
       toast.error("Failed to load community inbox");
     } finally {
       setIsLoading(false);
@@ -62,7 +63,7 @@ const CommunityDashboard: React.FC = () => {
       await syncCommentsApi();
       await fetchInbox();
       toast.success("Community Hub Updated!");
-    } catch (error) {
+    } catch {
       toast.error("Sync failed");
     } finally {
       setIsSyncing(false);
@@ -77,7 +78,7 @@ const CommunityDashboard: React.FC = () => {
       setReplyText(draft);
       setComments(prev => prev.map(c => c.id === selectedComment.id ? { ...c, aiDraftReply: draft } : c));
       toast.success("AI Drafted a human-like response!");
-    } catch (error) {
+    } catch {
       toast.error("AI drafting failed");
     } finally {
       setIsDrafting(false);
@@ -92,7 +93,7 @@ const CommunityDashboard: React.FC = () => {
       setComments(prev => prev.map(c => c.id === selectedComment.id ? { ...c, isReplied: true } : c));
       toast.success("Reply posted successfully!");
       setReplyText('');
-    } catch (error) {
+    } catch {
       toast.error("Failed to send reply");
     } finally {
       setIsSending(false);

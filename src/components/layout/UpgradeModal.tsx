@@ -33,16 +33,22 @@ interface RazorpayInstance {
   open: () => void;
 }
 
+interface UpgradePreview {
+  proRatedPrice: number;
+  discountApplied: number;
+}
+
 export const UpgradeModal: React.FC<UpgradeModalProps> = ({ isOpen, onClose, currentTierOrdinal = -1, message }) => {
   const navigate = useNavigate();
   const [tiers, setTiers] = React.useState<PricingTier[]>([]);
   const [isLoading, setIsLoading] = React.useState(false);
-  const [previews, setPreviews] = React.useState<Record<string, any>>({});
+  const [previews, setPreviews] = React.useState<Record<string, UpgradePreview>>({});
 
   React.useEffect(() => {
     if (isOpen) {
       fetchTiers();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen]);
 
   const fetchTiers = async () => {
@@ -64,7 +70,7 @@ export const UpgradeModal: React.FC<UpgradeModalProps> = ({ isOpen, onClose, cur
       );
       
       const results = await Promise.all(previewPromises);
-      const previewMap: Record<string, any> = {};
+      const previewMap: Record<string, UpgradePreview> = {};
       results.forEach(res => {
         if (res) previewMap[res.name] = res.preview;
       });

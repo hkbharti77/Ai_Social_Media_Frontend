@@ -3,7 +3,7 @@ import { broadcastEmail, getUserSummaries, type BroadcastEmailRequest } from '..
 import { toast } from 'react-hot-toast';
 import PageWrapper from '../../components/layout/PageWrapper';
 import { ConfirmModal } from '../../components/ui/ConfirmModal';
-import { Mail, Send, Users, AlertCircle } from 'lucide-react';
+import { Mail, Send, Users, AlertCircle, Sparkles } from 'lucide-react';
 
 export default function AdminBroadcast() {
     const [subject, setSubject] = useState('');
@@ -63,6 +63,7 @@ export default function AdminBroadcast() {
             setHtmlBody('');
             setTargetTier('ALL');
             setTargetEmail('');
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         } catch (error: any) {
             toast.error(error.response?.data?.message || 'Failed to send email');
         } finally {

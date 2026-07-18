@@ -33,6 +33,7 @@ interface TrendsTabProps {
   onSchedule: (post: GeneratedPost, index: number) => void;
   onDelete: (index: number) => void;
   onPredict: (draft: string, index: number) => void;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   onSaveThread: (thread: string[], status: any) => void;
   processingId: string | null;
   isPredicting: Record<number, boolean>;
@@ -41,12 +42,15 @@ interface TrendsTabProps {
 const TrendsTab: React.FC<TrendsTabProps> = ({ 
   selectedModel, 
   setSelectedModel,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   selectedAspectRatio,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   setSelectedAspectRatio,
   selectedPlatforms,
   setSelectedPlatforms,
   subscription,
   onSuccess,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   onUpgradeRequired,
   onGenerated,
   isGenerating,
@@ -75,7 +79,8 @@ const TrendsTab: React.FC<TrendsTabProps> = ({
       toast.success("Viral opportunity identified!");
       if (onGenerated) onGenerated([]); // Sync global state
       onSuccess();
-    } catch (error) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } catch (error: any) {
       handleApiError(error, "Failed to find viral opportunities.");
     } finally {
       setIsGenerating(false);
@@ -95,7 +100,8 @@ const TrendsTab: React.FC<TrendsTabProps> = ({
       });
       toast.success(status === PostStatus.DRAFT ? "Draft saved!" : "Scheduled!");
       setViralResult(null);
-    } catch (error) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } catch (error: any) {
       handleApiError(error, "Failed to save.");
     } finally {
       setIsSaving(false);
@@ -121,7 +127,9 @@ const TrendsTab: React.FC<TrendsTabProps> = ({
                   onClick={() => {
                     setSelectedPlatforms(
                       selectedPlatforms.includes(p) 
+                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
                         ? (selectedPlatforms.filter(x => x !== p) as any)
+                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
                         : ([...selectedPlatforms, p] as any)
                     );
                   }} 

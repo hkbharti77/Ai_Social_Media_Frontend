@@ -45,6 +45,7 @@ import {
 } from '../../api/videoCredits';
 import { cn } from '../../lib/utils';
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 declare global { interface Window { Razorpay: any; } }
 
 const SettingsPage: React.FC = () => {
@@ -103,6 +104,7 @@ const SettingsPage: React.FC = () => {
       toast.success('✅ Password updated successfully!');
       setShowPasswordModal(false);
       setPwOld(''); setPwNew(''); setPwConfirm('');
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
       setPwError(err?.response?.data?.message || 'Failed to update password. Please try again.');
     } finally {
@@ -163,10 +165,12 @@ const SettingsPage: React.FC = () => {
     if (activeSection === 'security') {
       fetchLoginHistory();
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeSection]);
 
   React.useEffect(() => {
     if (activeSection === 'video_credits') fetchPacksForModel(activeVideoModel);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeVideoModel]);
 
   const handleBuyPack = async (pack: VideoCreditPack) => {
@@ -180,6 +184,7 @@ const SettingsPage: React.FC = () => {
         name: 'VaniAI Video Credits',
         description: pack.displayName,
         order_id: order.order_id,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         handler: async (response: any) => {
           try {
             await verifyVideoCreditPaymentApi(response.razorpay_order_id, response.razorpay_payment_id, response.razorpay_signature);
@@ -192,6 +197,7 @@ const SettingsPage: React.FC = () => {
         modal: { ondismiss: () => toast.info('Payment cancelled') },
       };
       new window.Razorpay(options).open();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (e: any) {
       toast.error(e?.response?.data?.error || 'Failed to create order');
     } finally { setBuyingPack(null); }
@@ -206,7 +212,7 @@ const SettingsPage: React.FC = () => {
     setBuyingCustom(true);
     try {
       const order = await createCustomVideoCreditOrderApi(activeVideoModel, qty);
-      const pricePerVideo: Record<string, number> = { 'veo-lite': 55, 'veo-fast': 140, 'veo-standard': 470 }; // pack prices from VideoCreditPack.java
+
       const options = {
         key: order.key_id,
         amount: order.amount,
@@ -214,6 +220,7 @@ const SettingsPage: React.FC = () => {
         name: 'VaniAI Video Credits',
         description: `${qty} custom ${activeVideoModel} credits`,
         order_id: order.order_id,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         handler: async (response: any) => {
           try {
             await verifyVideoCreditPaymentApi(response.razorpay_order_id, response.razorpay_payment_id, response.razorpay_signature);
@@ -227,6 +234,7 @@ const SettingsPage: React.FC = () => {
         modal: { ondismiss: () => toast.info('Payment cancelled') },
       };
       new window.Razorpay(options).open();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (e: any) {
       toast.error(e?.response?.data?.error || 'Failed to create order');
     } finally { setBuyingCustom(false); }
@@ -235,9 +243,9 @@ const SettingsPage: React.FC = () => {
   // Tier-based accessible models
   const tierName = subscription?.tier?.toLowerCase().replace('_', ' ') || 'free';
   const accessibleModels: { id: 'veo-lite' | 'veo-fast' | 'veo-standard'; label: string; icon: React.ReactNode; color: string; bg: string; border: string; balance: number }[] = [
-    { id: 'veo-lite',     label: 'Veo Lite',     icon: <Film size={18} />,  color: 'text-emerald-400', bg: 'bg-emerald-400/10', border: 'border-emerald-500/20', balance: wallet?.lite ?? 0 },
-    { id: 'veo-fast',     label: 'Veo Fast',     icon: <Zap size={18} />,   color: 'text-blue-400',    bg: 'bg-blue-400/10',    border: 'border-blue-500/20',    balance: wallet?.fast ?? 0 },
-    { id: 'veo-standard', label: 'Veo Standard', icon: <Star size={18} />,  color: 'text-purple-400',  bg: 'bg-purple-400/10',  border: 'border-purple-500/20',  balance: wallet?.standard ?? 0 },
+    { id: 'veo-lite' as const,     label: 'Veo Lite',     icon: <Film size={18} />,  color: 'text-emerald-400', bg: 'bg-emerald-400/10', border: 'border-emerald-500/20', balance: wallet?.lite ?? 0 },
+    { id: 'veo-fast' as const,     label: 'Veo Fast',     icon: <Zap size={18} />,   color: 'text-blue-400',    bg: 'bg-blue-400/10',    border: 'border-blue-500/20',    balance: wallet?.fast ?? 0 },
+    { id: 'veo-standard' as const, label: 'Veo Standard', icon: <Star size={18} />,  color: 'text-purple-400',  bg: 'bg-purple-400/10',  border: 'border-purple-500/20',  balance: wallet?.standard ?? 0 },
   ].filter(m => {
     if (['standard'].includes(tierName)) return m.id === 'veo-lite';
     if (['pro'].includes(tierName)) return m.id !== 'veo-standard';

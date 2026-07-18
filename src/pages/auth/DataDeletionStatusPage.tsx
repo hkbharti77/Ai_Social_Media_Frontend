@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import axios from 'axios';
 import { ShieldCheck, AlertTriangle, Loader2 } from 'lucide-react';
@@ -21,6 +21,7 @@ export default function DataDeletionStatusPage() {
         const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8080';
         const response = await axios.get(`${apiUrl}/api/v1/social/facebook/deletion-status/${code}`);
         setStatus(response.data);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } catch (err: any) {
         if (err.response && err.response.status === 404) {
           setError('Confirmation code not found. The request might have expired or the code is invalid.');

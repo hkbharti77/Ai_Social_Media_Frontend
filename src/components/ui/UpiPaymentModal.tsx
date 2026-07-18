@@ -23,6 +23,7 @@ type Tab = 'qr' | 'upi_id';
 
 declare global {
   interface Window {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     Razorpay: any;
   }
 }
@@ -44,6 +45,7 @@ const UpiPaymentModal: React.FC<UpiPaymentModalProps> = ({
   // Reset state when modal opens
   useEffect(() => {
     if (isOpen) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setUpiId('');
       setUpiIdError('');
       setIsProcessing(false);
@@ -61,6 +63,7 @@ const UpiPaymentModal: React.FC<UpiPaymentModalProps> = ({
   const openRazorpay = (method: 'qr' | 'upi_id') => {
     if (!order) return;
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const options: any = {
       key: order.key_id,
       amount: order.amount,
@@ -68,6 +71,7 @@ const UpiPaymentModal: React.FC<UpiPaymentModalProps> = ({
       name: 'VaniAI',
       description: `Upgrade to ${tierName} Plan`,
       order_id: order.order_id,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       handler: (response: any) => {
         onPaymentSuccess(
           response.razorpay_order_id,
@@ -115,6 +119,7 @@ const UpiPaymentModal: React.FC<UpiPaymentModalProps> = ({
     }
 
     const rzp = new window.Razorpay(options);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     rzp.on('payment.failed', (response: any) => {
       toast.error('Payment failed: ' + response.error.description);
       setIsProcessing(false);

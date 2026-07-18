@@ -5,7 +5,7 @@ import {
   Sparkles, 
   ArrowRight, 
   Rocket, 
-  UserPlus, 
+
   ShieldCheck,
   Zap
 } from 'lucide-react';

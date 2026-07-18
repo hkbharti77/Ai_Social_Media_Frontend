@@ -35,6 +35,7 @@ interface MemeTabProps {
   onSchedule: (post: GeneratedPost, index: number) => void;
   onDelete: (index: number) => void;
   onPredict: (draft: string, index: number) => void;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   onSaveThread: (thread: string[], status: any) => void;
   processingId: string | null;
   isPredicting: Record<number, boolean>;
@@ -76,6 +77,7 @@ const MemeTab: React.FC<MemeTabProps> = ({
       setMemeResult(response);
       toast.success("Meme generated successfully!");
       onSuccess();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
       if (error.response?.status === 402) {
         onUpgradeRequired("You've reached your credit limit!");

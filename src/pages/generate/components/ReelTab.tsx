@@ -39,6 +39,7 @@ interface ReelTabProps {
   onSchedule: (post: GeneratedPost, index: number) => void;
   onDelete: (index: number) => void;
   onPredict: (draft: string, index: number) => void;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   onSaveThread: (thread: string[], status: any) => void;
   processingId: string | null;
   isPredicting: Record<number, boolean>;
@@ -249,7 +250,9 @@ const ReelTab: React.FC<ReelTabProps> = ({
                   onClick={() => {
                     setSelectedPlatforms(
                       selectedPlatforms.includes(p) 
+                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
                         ? (selectedPlatforms.filter(x => x !== p) as any)
+                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
                         : ([...selectedPlatforms, p] as any)
                     );
                   }} 

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Sparkles, Save, Loader2, Target, RefreshCcw, Layout, Image as ImageIcon, Smartphone } from 'lucide-react';
+import { Sparkles, Save, Loader2, Target, RefreshCcw } from 'lucide-react';
 import { Button } from '../../../components/ui/Button';
 import { generateCampaignApi, type CampaignResponse, type GeneratedPost } from '../../../api/ai';
 import { createPostApi, PostStatus, type Post } from '../../../api/posts';
@@ -35,6 +35,7 @@ interface CampaignTabProps {
   onSchedule: (post: GeneratedPost, index: number) => void;
   onDelete: (index: number) => void;
   onPredict: (draft: string, index: number) => void;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   onSaveThread: (thread: string[], status: any) => void;
   processingId: string | null;
   isPredicting: Record<number, boolean>;
@@ -44,6 +45,7 @@ const CampaignTab: React.FC<CampaignTabProps> = ({
   selectedModel, 
   setSelectedModel,
   selectedAspectRatio,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   setSelectedAspectRatio,
   selectedPlatforms,
   setSelectedPlatforms,
@@ -227,6 +229,7 @@ const CampaignTab: React.FC<CampaignTabProps> = ({
               ].map((m) => (
                 <button
                   key={m.id}
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
                   onClick={() => setContentType(m.id as any)}
                   className={cn(
                     "flex-1 py-2 rounded-lg text-[10px] font-black uppercase transition-all",

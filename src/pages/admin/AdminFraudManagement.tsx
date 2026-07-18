@@ -35,6 +35,7 @@ export default function AdminFraudManagement() {
         } else {
             loadSuspiciousRegistrations();
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [activeTab, currentPage]);
 
     const loadFraudUsers = async () => {
@@ -42,7 +43,7 @@ export default function AdminFraudManagement() {
         try {
             const data = await getFraudFlaggedUsers(currentPage, 20);
             setFraudUsers(data);
-        } catch (error) {
+        } catch {
             toast.error('Failed to load fraud-flagged users');
         } finally {
             setLoading(false);
@@ -54,7 +55,7 @@ export default function AdminFraudManagement() {
         try {
             const data = await getSuspiciousRegistrations();
             setSuspiciousRegs(data);
-        } catch (error) {
+        } catch {
             toast.error('Failed to load suspicious registrations');
         } finally {
             setLoading(false);
@@ -72,6 +73,7 @@ export default function AdminFraudManagement() {
                     toast.success('User flagged successfully');
                     loadFraudUsers();
                     setShowConfirmModal(false);
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 } catch (error: any) {
                     toast.error(error.response?.data?.message || 'Failed to flag user');
                 }
@@ -85,6 +87,7 @@ export default function AdminFraudManagement() {
             await clearFraudFlag(userId);
             toast.success('Fraud flag cleared successfully');
             loadFraudUsers();
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         } catch (error: any) {
             toast.error(error.response?.data?.message || 'Failed to clear flag');
         }

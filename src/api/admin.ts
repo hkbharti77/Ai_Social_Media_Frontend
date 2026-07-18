@@ -26,6 +26,7 @@ export interface UserIntelligence {
     lastLoginAt: string;
     topModelId: string;
     modelBreakdown: Record<string, number>;
+    isActive?: boolean;
 }
 
 export interface DetailedAiLog {

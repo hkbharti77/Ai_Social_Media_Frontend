@@ -36,7 +36,7 @@ export default function AdminSystemStats() {
             setRevenueStats(revenue);
             setCreditStats(credits);
             setPostStats(posts);
-        } catch (error) {
+        } catch {
             toast.error('Failed to load system stats');
         } finally {
             setLoading(false);

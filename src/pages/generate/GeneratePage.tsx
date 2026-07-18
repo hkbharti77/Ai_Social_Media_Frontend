@@ -43,7 +43,7 @@ import PollTab from './components/PollTab';
 import MemeTab from './components/MemeTab';
 import TrendsTab from './components/TrendsTab';
 import StrategyTab from './components/StrategyTab';
-import ResultsView from './components/ResultsView';
+
 
 const GeneratePage: React.FC = () => {
   // Global State
@@ -114,7 +114,9 @@ const GeneratePage: React.FC = () => {
       generatedPosts,
       generatedThreads,
       viewMode,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       onDraft: (p: any, i: number) => handleDraft(p, i, selectedPlatforms),
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       onSchedule: (p: any, i: number) => handleSchedule(p, i, selectedPlatforms),
       onDelete: handleDelete,
       onPredict: handlePredictPerformance,

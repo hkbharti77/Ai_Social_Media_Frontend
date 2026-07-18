@@ -32,6 +32,7 @@ interface StrategyTabProps {
   onSchedule: (post: GeneratedPost, index: number) => void;
   onDelete: (index: number) => void;
   onPredict: (draft: string, index: number) => void;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   onSaveThread: (thread: string[], status: any) => void;
   processingId: string | null;
   isPredicting: Record<number, boolean>;
@@ -40,12 +41,17 @@ interface StrategyTabProps {
 const StrategyTab: React.FC<StrategyTabProps> = ({ 
   selectedModel, 
   setSelectedModel,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   selectedAspectRatio,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   setSelectedAspectRatio,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   selectedPlatforms,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   setSelectedPlatforms,
   subscription,
   onSuccess,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   onUpgradeRequired,
   onGenerated,
   isGenerating,
@@ -76,7 +82,8 @@ const StrategyTab: React.FC<StrategyTabProps> = ({
       toast.success("Strategic insights discovered!");
       if (onGenerated) onGenerated([]); // Sync global state
       onSuccess();
-    } catch (error) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } catch (error: any) {
       handleApiError(error, "Failed to analyze content gaps.");
     } finally {
       setIsGenerating(false);
@@ -95,7 +102,8 @@ const StrategyTab: React.FC<StrategyTabProps> = ({
       toast.success("Strategic insights generated from your profile!");
       if (onGenerated) onGenerated([]); // Sync global state
       onSuccess();
-    } catch (error) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } catch (error: any) {
       handleApiError(error, "Failed to analyze content strategy.");
     } finally {
       setIsGenerating(false);

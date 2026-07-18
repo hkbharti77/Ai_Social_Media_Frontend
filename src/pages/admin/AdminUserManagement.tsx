@@ -24,8 +24,10 @@ import {
     Eye, 
     CreditCard, 
     Crown,
-    X
+    X,
+    Users
 } from 'lucide-react';
+import { cn } from '../../lib/utils';
 
 export default function AdminUserManagement() {
     const [users, setUsers] = useState<PaginatedResponse<UserIntelligence> | null>(null);
@@ -61,6 +63,7 @@ export default function AdminUserManagement() {
 
     useEffect(() => {
         loadUsers();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [searchQuery, currentPage]);
 
     useEffect(() => {
@@ -74,7 +77,7 @@ export default function AdminUserManagement() {
         try {
             const data = await getUserDirectory(searchQuery, currentPage, 15);
             setUsers(data);
-        } catch (error) {
+        } catch {
             toast.error('Failed to load users');
         } finally {
             setLoading(false);
@@ -121,6 +124,7 @@ export default function AdminUserManagement() {
                     setSelectAll(false);
                     loadUsers();
                     setShowConfirmModal(false);
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 } catch (error: any) {
                     toast.error(error.response?.data?.message || 'Failed to delete users');
                 }
@@ -140,6 +144,7 @@ export default function AdminUserManagement() {
                     toast.success('User banned successfully');
                     loadUsers();
                     setShowConfirmModal(false);
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 } catch (error: any) {
                     toast.error(error.response?.data?.message || 'Failed to ban user');
                 }
@@ -153,6 +158,7 @@ export default function AdminUserManagement() {
             await unbanUser(userId);
             toast.success('User unbanned successfully');
             loadUsers();
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         } catch (error: any) {
             toast.error(error.response?.data?.message || 'Failed to unban user');
         }
@@ -169,6 +175,7 @@ export default function AdminUserManagement() {
                     toast.success('User deleted successfully');
                     loadUsers();
                     setShowConfirmModal(false);
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 } catch (error: any) {
                     toast.error(error.response?.data?.message || 'Failed to delete user');
                 }
@@ -182,7 +189,7 @@ export default function AdminUserManagement() {
             const profile = await getUserProfile(userId);
             setSelectedUser(profile);
             setShowProfileModal(true);
-        } catch (error) {
+        } catch {
             toast.error('Failed to load user profile');
         }
     };
@@ -212,6 +219,7 @@ export default function AdminUserManagement() {
             setCreditAmount('');
             setCreditReason('');
             loadUsers();
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         } catch (error: any) {
             toast.error(error.response?.data?.message || 'Failed to adjust credits');
         }
@@ -229,6 +237,7 @@ export default function AdminUserManagement() {
             setShowSubscriptionModal(false);
             setNewTier('');
             loadUsers();
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         } catch (error: any) {
             toast.error(error.response?.data?.message || 'Failed to update subscription');
         }

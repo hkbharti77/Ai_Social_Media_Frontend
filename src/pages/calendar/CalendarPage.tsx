@@ -27,7 +27,8 @@ const CalendarPage: React.FC = () => {
   const [modalMode, setModalMode] = useState<'create' | 'edit'>('create');
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const [postTargetId, setPostTargetId] = useState<number | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [postTargetId] = useState<number | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {

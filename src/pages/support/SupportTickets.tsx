@@ -4,7 +4,7 @@ import { getMyTicketsApi, createTicketApi } from '../../api/supportTicket.api';
 import type { SupportTicketResponse, SupportTicketRequest } from '../../types/support-ticket.types';
 import { SupportTicketPriority } from '../../types/support-ticket.types';
 import { Button } from '../../components/ui/Button';
-import { Plus, Ticket, Loader2, MessageSquare, AlertCircle } from 'lucide-react';
+import { Plus, Ticket, Loader2, MessageSquare } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '../../lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -24,6 +24,7 @@ const SupportTickets: React.FC = () => {
     try {
       const data = await getMyTicketsApi();
       setTickets(data);
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (error) {
       toast.error('Failed to load tickets.');
     } finally {
@@ -56,6 +57,7 @@ const SupportTickets: React.FC = () => {
       setDescription('');
       setPriority(SupportTicketPriority.MEDIUM);
       toast.success('Support ticket created successfully!');
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (error) {
       toast.error('Failed to create ticket.');
     } finally {

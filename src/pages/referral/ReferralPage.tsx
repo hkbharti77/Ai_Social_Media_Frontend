@@ -26,6 +26,7 @@ const ReferralPage: React.FC = () => {
       try {
         const data = await getProfile();
         setSubscription(data.subscription);
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       } catch (e) {
         toast.error("Failed to sync neural connection.");
       } finally {

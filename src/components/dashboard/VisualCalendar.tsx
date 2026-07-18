@@ -12,7 +12,7 @@ import {
   subMonths,
   parseISO
 } from 'date-fns';
-import { motion, AnimatePresence } from 'framer-motion';
+
 import { 
   ChevronLeft,
   ChevronRight, 

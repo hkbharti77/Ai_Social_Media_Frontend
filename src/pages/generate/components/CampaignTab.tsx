@@ -110,7 +110,7 @@ const CampaignTab: React.FC<CampaignTabProps> = ({
         campaignResult.posts.forEach((post) => {
           promises.push(createPostApi({
             caption: post.caption,
-            hashtags: post.hashtags.join(' '),
+            hashtags: (post.hashtags || []).join(' '),
             imageUrl: post.imageUrl || '',
             platform: selectedPlatforms.includes('FB') ? 'FACEBOOK' : 'LINKEDIN',
             status: PostStatus.DRAFT
@@ -121,7 +121,7 @@ const CampaignTab: React.FC<CampaignTabProps> = ({
         campaignResult.stories.forEach((story) => {
           promises.push(createPostApi({
             caption: story.caption,
-            hashtags: story.hashtags.join(' '),
+            hashtags: (story.hashtags || []).join(' '),
             imageUrl: story.imageUrl || '',
             platform: 'INSTAGRAM',
             status: PostStatus.DRAFT,
@@ -132,7 +132,7 @@ const CampaignTab: React.FC<CampaignTabProps> = ({
         // Save Reel
         promises.push(createPostApi({
           caption: campaignResult.reel.caption,
-          hashtags: campaignResult.reel.hashtags.join(' '),
+          hashtags: (campaignResult.reel.hashtags || []).join(' '),
           imageUrl: campaignResult.reel.imageUrl || '',
           platform: 'INSTAGRAM',
           status: PostStatus.DRAFT,

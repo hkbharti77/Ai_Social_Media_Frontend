@@ -3,6 +3,8 @@ import ProtectedRoute from './ProtectedRoute';
 import LoginPage from '../pages/auth/LoginPage';
 import RegisterPage from '../pages/auth/RegisterPage';
 import VerifySuccessPage from '../pages/auth/VerifySuccessPage';
+import ForgotPasswordPage from '../pages/auth/ForgotPasswordPage';
+import ResetPasswordPage from '../pages/auth/ResetPasswordPage';
 import DashboardPage from '../pages/dashboard/DashboardPage';
 import GeneratePage from '../pages/generate/GeneratePage';
 import ConnectAccountsPage from '../pages/connect/ConnectAccountsPage';
@@ -25,8 +27,16 @@ import AdminBroadcast from '../pages/admin/AdminBroadcast';
 import CommunityDashboard from '../pages/community/CommunityDashboard';
 import CalendarPage from '../pages/calendar/CalendarPage';
 import ReferralPage from '../pages/referral/ReferralPage';
+import SupportTickets from '../pages/support/SupportTickets';
+import AdminSupportTickets from '../pages/admin/AdminSupportTickets';
+
+import DataDeletionStatusPage from '../pages/auth/DataDeletionStatusPage';
 
 export const router = createBrowserRouter([
+  {
+    path: '/data-deletion-status/:code',
+    element: <DataDeletionStatusPage />,
+  },
   {
     path: '/login',
     element: <LoginPage />,
@@ -38,6 +48,14 @@ export const router = createBrowserRouter([
   {
     path: '/verify-success',
     element: <VerifySuccessPage />,
+  },
+  {
+    path: '/forgot-password',
+    element: <ForgotPasswordPage />,
+  },
+  {
+    path: '/reset-password',
+    element: <ResetPasswordPage />,
   },
   {
     element: <ProtectedRoute />,
@@ -129,6 +147,14 @@ export const router = createBrowserRouter([
       {
         path: '/admin/broadcast',
         element: <AdminBroadcast />,
+      },
+      {
+        path: '/admin/support',
+        element: <AdminSupportTickets />,
+      },
+      {
+        path: '/support',
+        element: <SupportTickets />,
       },
       {
         path: '/referral',

@@ -73,6 +73,11 @@ export const deletePostApi = async (id: number): Promise<void> => {
   await axiosInstance.delete(`/posts/${id}`);
 };
 
+export const bulkDeletePostsApi = async (ids: number[]): Promise<{ deleted: number; message: string }> => {
+  const response = await axiosInstance.post('/posts/bulk-delete', ids);
+  return response.data;
+};
+
 export const schedulePostApi = async (id: number, scheduledAt: string): Promise<Post> => {
   const response = await axiosInstance.post<Post>(`/posts/${id}/schedule`, null, {
     params: { scheduledAt }

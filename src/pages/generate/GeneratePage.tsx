@@ -24,12 +24,12 @@ import { useAiGeneration } from '../../hooks/useAiGeneration';
 import type { ModelOption } from '../../components/ui/ModelSelect';
 
 const AI_MODELS: ModelOption[] = [
-  { id: 'imagen-4-fast', name: 'Imagen 4.0 Fast', cost: 2.0, tier: 1, icon: ImageIcon, desc: 'Quick turnaround visualizations' },
-  { id: 'imagen-4-standard', name: 'Imagen 4.0 Standard', cost: 4.0, tier: 1, icon: ImageIcon, desc: 'Balanced creative intelligence' },
-  { id: 'imagen-4-ultra', name: 'Imagen 4.0 Ultra', cost: 6.0, tier: 2, icon: Sparkles, desc: 'Studio-grade photorealistic AI' },
-  { id: 'gemini-3.1-flash-image', name: 'Gemini 3.1 Flash', cost: 10.0, tier: 0, icon: Cpu, desc: 'High-quality efficient rendering' },
-  { id: 'gemini-3-pro-image', name: 'Gemini 3.0 Pro', cost: 14.0, tier: 2, icon: ShieldCheck, desc: 'Elite reasoning & deep strategy' },
-  { id: 'gemini-2.5-flash-image', name: 'Gemini 2.5 Flash', cost: 4.0, tier: 0, icon: Sparkles, desc: 'Standard photorealistic and fast' },
+  { id: 'imagen-4-fast', name: 'Imagen 4.0 Fast', cost: 2.0, tier: 1, icon: ImageIcon, desc: 'Quick turnaround visualizations', healthScore: 0.98 },
+  { id: 'imagen-4-standard', name: 'Imagen 4.0 Standard', cost: 4.0, tier: 1, icon: ImageIcon, desc: 'Balanced creative intelligence', healthScore: 0.99 },
+  { id: 'imagen-4-ultra', name: 'Imagen 4.0 Ultra', cost: 6.0, tier: 2, icon: Sparkles, desc: 'Studio-grade photorealistic AI', healthScore: 0.95 },
+  { id: 'gemini-3.1-flash-image', name: 'Gemini 3.1 Flash', cost: 10.0, tier: 0, icon: Cpu, desc: 'High-quality efficient rendering', healthScore: 0.97 },
+  { id: 'gemini-3-pro-image', name: 'Gemini 3.0 Pro', cost: 14.0, tier: 2, icon: ShieldCheck, desc: 'Elite reasoning & deep strategy', healthScore: 0.88 },
+  { id: 'gemini-2.5-flash-image', name: 'Gemini 2.5 Flash', cost: 4.0, tier: 0, icon: Sparkles, desc: 'Standard photorealistic and fast', healthScore: 0.92 },
 ];
 
 // Modular Components

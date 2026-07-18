@@ -17,20 +17,11 @@ import { getProfile, type ProfileResponse } from '../../api/profile';
 import { getPricingTiersApi, type PricingTier } from '../../api/pricing';
 import { createRazorpayOrder, verifyRazorpayPayment } from '../../api/payment';
 import { toast } from 'sonner';
-import UpiPaymentModal from '../../components/ui/UpiPaymentModal';
-
 const PricingPage: React.FC = () => {
   const [tiers, setTiers] = React.useState<PricingTier[]>([]);
   const [subscription, setSubscription] = React.useState<ProfileResponse['subscription'] | null>(null);
   const [isLoading, setIsLoading] = React.useState(true);
   const [previews, setPreviews] = React.useState<Record<string, any>>({});
-
-  // UPI modal state
-  const [upiModalOpen, setUpiModalOpen] = React.useState(false);
-  const [pendingOrder, setPendingOrder] = React.useState<{
-    order_id: string; amount: number; currency: string; key_id: string;
-  } | null>(null);
-  const [pendingTierName, setPendingTierName] = React.useState('');
 
   React.useEffect(() => {
     fetchPricingData();
@@ -95,38 +86,50 @@ const PricingPage: React.FC = () => {
 
       toast.dismiss(loadingToast);
 
-      // Open UPI payment modal
-      setPendingOrder({
-        order_id: order.order_id!,
-        amount: order.amount!,
-        currency: order.currency!,
-        key_id: order.key_id!,
-      });
-      setPendingTierName(tier.name);
-      setUpiModalOpen(true);
+      // Open standard Razorpay checkout (not UPI modal)
+      const options = {
+        key: order.key_id,
+        amount: order.amount,
+        currency: order.currency,
+        name: "VaniAI",
+        description: `Upgrade to ${tier.name} Plan`,
+        order_id: order.order_id,
+        handler: async (response: { razorpay_order_id: string; razorpay_payment_id: string; razorpay_signature: string }) => {
+          const verifyingToast = toast.loading("Verifying payment...");
+          try {
+            await verifyRazorpayPayment(
+              response.razorpay_order_id,
+              response.razorpay_payment_id,
+              response.razorpay_signature
+            );
+            toast.success("Payment successful!", { 
+                description: `You are now on the ${tier.name} plan.`,
+                id: verifyingToast 
+            });
+            fetchPricingData();
+          } catch {
+            toast.error("Payment verification failed", { id: verifyingToast });
+          }
+        },
+        prefill: {
+          name: "VaniAI User",
+          email: "user@vaniai.com",
+        },
+        theme: {
+          color: "#7c3aed",
+        },
+        modal: {
+          ondismiss: function() {
+            toast.info("Payment cancelled");
+          }
+        }
+      };
+
+      const rzp = new (window as any).Razorpay(options);
+      rzp.open();
       
     } catch {
       toast.error("Failed to initiate payment", { id: loadingToast });
-    }
-  };
-
-  const handleUpiPaymentSuccess = async (
-    razorpay_order_id: string,
-    razorpay_payment_id: string,
-    razorpay_signature: string
-  ) => {
-    const verifyingToast = toast.loading("Verifying payment...");
-    try {
-      await verifyRazorpayPayment(razorpay_order_id, razorpay_payment_id, razorpay_signature);
-      toast.success("Payment successful!", {
-        description: `You are now on the ${pendingTierName} plan.`,
-        id: verifyingToast,
-      });
-      setUpiModalOpen(false);
-      setPendingOrder(null);
-      fetchPricingData();
-    } catch {
-      toast.error("Payment verification failed", { id: verifyingToast });
     }
   };
 
@@ -173,10 +176,10 @@ const PricingPage: React.FC = () => {
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-7xl mx-auto px-4">
           {tiers
-            .filter((_, idx) => {
+            .filter((tier) => {
               const currentOrdinal = subscription?.tierOrdinal ?? 0;
               // Only show tiers higher than the current one
-              return idx > currentOrdinal;
+              return tier.tierOrdinal > currentOrdinal && tier.name.toLowerCase() !== 'free';
             })
             .map((tier, idx) => {
               const preview = previews[tier.name];
@@ -263,7 +266,7 @@ const PricingPage: React.FC = () => {
             })}
           
           {/* Fallback if no upgrades available */}
-          {tiers.filter((_, idx) => idx > (subscription?.tierOrdinal ?? 0)).length === 0 && (
+          {tiers.filter((tier) => tier.tierOrdinal > (subscription?.tierOrdinal ?? 0) && tier.name.toLowerCase() !== 'free').length === 0 && (
             <div className="col-span-full py-20 text-center space-y-6 bg-secondary/10 rounded-[3rem] border-2 border-dashed border-white/5">
               <div className="w-20 h-20 bg-primary/10 rounded-3xl flex items-center justify-center mx-auto text-primary">
                 <Star size={40} />
@@ -300,15 +303,6 @@ const PricingPage: React.FC = () => {
             </div>
         </section>
       </div>
-
-      {/* UPI Payment Modal */}
-      <UpiPaymentModal
-        isOpen={upiModalOpen}
-        onClose={() => { setUpiModalOpen(false); setPendingOrder(null); }}
-        order={pendingOrder}
-        tierName={pendingTierName}
-        onPaymentSuccess={handleUpiPaymentSuccess}
-      />
     </PageWrapper>
   );
 };

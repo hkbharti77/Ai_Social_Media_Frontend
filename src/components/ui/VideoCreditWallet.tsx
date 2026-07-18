@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Film, Zap, Star, AlertTriangle, ShoppingCart, ChevronDown, ChevronUp, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '../../lib/utils';
+import { useProfile } from '../../context/ProfileContext';
 import {
   getVideoCreditWalletApi,
   getVideoCreditPacksByModelApi,
@@ -37,6 +38,7 @@ const TIER_MODELS: Record<string, string[]> = {
 };
 
 const VideoCreditWalletComponent: React.FC<VideoCreditWalletProps> = ({ userTier, onWalletUpdate }) => {
+  const { refreshProfile } = useProfile();
   const [wallet, setWallet] = useState<VideoCreditWallet | null>(null);
   const [loading, setLoading] = useState(true);
   const [expandedModel, setExpandedModel] = useState<string | null>(null);
@@ -102,6 +104,7 @@ const VideoCreditWalletComponent: React.FC<VideoCreditWalletProps> = ({ userTier
             );
             toast.success(`✅ ${pack.videoCount} video credits added to your wallet!`);
             fetchWallet();
+            refreshProfile(); // Refresh sidebar
           } catch {
             toast.error('Payment verification failed. Contact support.');
           }

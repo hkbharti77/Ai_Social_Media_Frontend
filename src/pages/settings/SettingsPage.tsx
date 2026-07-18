@@ -18,15 +18,21 @@ import {
   Star,
   ShoppingCart,
   Loader2,
-  AlertTriangle
+  AlertTriangle,
+  Eye,
+  EyeOff,
+  X,
+  KeyRound
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 import { useAuth } from '../../context/useAuth';
-import { getProfile, type ProfileResponse } from '../../api/profile';
+import { useProfile } from '../../context/ProfileContext';
+import { getProfile, changePasswordApi, type ProfileResponse } from '../../api/profile';
 import { getPaymentHistory, getUsageHistory, downloadReceiptPdf, type PaymentOrder, type CreditUsage } from '../../api/usage';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { History, FileText, Download, Heart } from 'lucide-react';
+import { getLoginHistoryApi, type LoginHistoryEntry } from '../../api/auth';
 import ReferralCard from '../../components/dashboard/ReferralCard';
 import {
   getVideoCreditWalletApi,
@@ -43,11 +49,28 @@ declare global { interface Window { Razorpay: any; } }
 
 const SettingsPage: React.FC = () => {
   const { user } = useAuth();
+  const { refreshProfile } = useProfile();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [activeSection, setActiveSection] = useState<string | null>(null);
   const [subscription, setSubscription] = useState<ProfileResponse['subscription'] | null>(null);
   const [payments, setPayments] = useState<PaymentOrder[]>([]);
   const [usage, setUsage] = useState<CreditUsage[]>([]);
+
+  // Change password modal state
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [pwOld, setPwOld] = useState('');
+  const [pwNew, setPwNew] = useState('');
+  const [pwConfirm, setPwConfirm] = useState('');
+  const [pwLoading, setPwLoading] = useState(false);
+  const [pwError, setPwError] = useState<string | null>(null);
+  const [showOld, setShowOld] = useState(false);
+  const [showNew, setShowNew] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
+
+  // Login history state
+  const [loginHistory, setLoginHistory] = useState<LoginHistoryEntry[]>([]);
+  const [loginHistoryLoading, setLoginHistoryLoading] = useState(false);
 
   // Video credits state
   const [wallet, setWallet] = useState<VideoCreditWallet | null>(null);
@@ -59,6 +82,33 @@ const SettingsPage: React.FC = () => {
   // Custom quantity
   const [customQty, setCustomQty] = useState<string>('');
   const [buyingCustom, setBuyingCustom] = useState(false);
+
+  const fetchLoginHistory = async () => {
+    setLoginHistoryLoading(true);
+    try {
+      const data = await getLoginHistoryApi();
+      setLoginHistory(data);
+    } catch { /* silent */ }
+    finally { setLoginHistoryLoading(false); }
+  };
+
+  const handleChangePassword = async () => {
+    setPwError(null);
+    if (!pwOld || !pwNew || !pwConfirm) { setPwError('All fields are required.'); return; }
+    if (pwNew.length < 8) { setPwError('New password must be at least 8 characters.'); return; }
+    if (pwNew !== pwConfirm) { setPwError("New passwords don't match."); return; }
+    try {
+      setPwLoading(true);
+      await changePasswordApi(pwOld, pwNew);
+      toast.success('✅ Password updated successfully!');
+      setShowPasswordModal(false);
+      setPwOld(''); setPwNew(''); setPwConfirm('');
+    } catch (err: any) {
+      setPwError(err?.response?.data?.message || 'Failed to update password. Please try again.');
+    } finally {
+      setPwLoading(false);
+    }
+  };
 
   const fetchData = async () => {
     try {
@@ -78,7 +128,13 @@ const SettingsPage: React.FC = () => {
 
   React.useEffect(() => {
     fetchData();
-  }, []);
+    
+    // Check for tab query parameter
+    const tab = searchParams.get('tab');
+    if (tab) {
+      setActiveSection(tab);
+    }
+  }, [searchParams]);
 
   const fetchWallet = async () => {
     setWalletLoading(true);
@@ -104,6 +160,9 @@ const SettingsPage: React.FC = () => {
       fetchWallet();
       fetchPacksForModel(activeVideoModel);
     }
+    if (activeSection === 'security') {
+      fetchLoginHistory();
+    }
   }, [activeSection]);
 
   React.useEffect(() => {
@@ -126,6 +185,7 @@ const SettingsPage: React.FC = () => {
             await verifyVideoCreditPaymentApi(response.razorpay_order_id, response.razorpay_payment_id, response.razorpay_signature);
             toast.success(`✅ ${pack.videoCount} video credits added!`);
             fetchWallet();
+            refreshProfile(); // Refresh sidebar
           } catch { toast.error('Payment verification failed.'); }
         },
         theme: { color: '#6366f1' },
@@ -160,6 +220,7 @@ const SettingsPage: React.FC = () => {
             toast.success(`✅ ${qty} video credits added!`);
             setCustomQty('');
             fetchWallet();
+            refreshProfile(); // Refresh sidebar
           } catch { toast.error('Payment verification failed.'); }
         },
         theme: { color: '#6366f1' },
@@ -190,6 +251,7 @@ const SettingsPage: React.FC = () => {
     { id: 'account', title: 'Account Settings', desc: 'Secure and personalize your profile.', icon: User, color: 'text-blue-400' },
     { id: 'billing', title: 'Subscription & Billing', desc: 'Enterprise plan and invoices.', icon: CreditCard, color: 'text-emerald-400' },
     ...(isVideoEligible ? [{ id: 'video_credits', title: 'Video Credits', desc: 'Buy Veo video credits for your wallet.', icon: Film, color: 'text-purple-400' }] : []),
+    { id: 'security', title: 'Security & Login History', desc: 'Recent login activity and device access.', icon: ShieldCheck, color: 'text-red-400' },
     { id: 'referral', title: 'Refer & Earn', desc: 'Secure 50 bonus credits for every verified pioneer.', icon: Heart, color: 'text-rose-400' },
     { id: 'usage', title: 'Usage Activity', desc: 'Real-time ledger of AI credit consumption.', icon: History, color: 'text-orange-400' },
     { id: 'notifications', title: 'Alert Preferences', desc: 'Customize your real-time notification lab.', icon: Bell, color: 'text-amber-400' },
@@ -205,6 +267,113 @@ const SettingsPage: React.FC = () => {
 
   const renderSectionContent = () => {
     switch (activeSection) {
+      case 'security':
+        return (
+          <div className="space-y-8">
+            {/* Header */}
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-xl font-black tracking-tighter">Login History</h3>
+                <p className="text-muted-foreground text-sm font-medium opacity-70 mt-1">
+                  Recent access to your account across all devices
+                </p>
+              </div>
+              <button
+                onClick={fetchLoginHistory}
+                disabled={loginHistoryLoading}
+                className="flex items-center gap-2 px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-sm font-bold transition-colors"
+              >
+                {loginHistoryLoading ? <Loader2 size={14} className="animate-spin" /> : <ShieldCheck size={14} />}
+                Refresh
+              </button>
+            </div>
+
+            {/* Login events list */}
+            {loginHistoryLoading ? (
+              <div className="flex justify-center py-16">
+                <Loader2 size={32} className="animate-spin text-primary" />
+              </div>
+            ) : loginHistory.length === 0 ? (
+              <div className="p-12 text-center bg-white/5 rounded-[1.5rem] border-2 border-dashed border-white/5 text-muted-foreground">
+                No login history found yet.
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {loginHistory.map((entry) => {
+                  const deviceEmoji = entry.deviceType === 'MOBILE' ? '📱' : entry.deviceType === 'TABLET' ? '📟' : '💻';
+                  const isSuccess = entry.status === 'SUCCESS';
+                  const loginDate = new Date(entry.createdAt).toLocaleString('en-IN', {
+                    day: '2-digit', month: 'short', year: 'numeric',
+                    hour: '2-digit', minute: '2-digit', hour12: true
+                  });
+
+                  return (
+                    <div
+                      key={entry.id}
+                      className={`flex flex-col md:flex-row items-start md:items-center justify-between p-5 rounded-[1.5rem] border-2 transition-all gap-4 ${
+                        entry.isNewIp
+                          ? 'bg-amber-500/5 border-amber-500/20'
+                          : isSuccess
+                          ? 'bg-secondary/20 border-white/5 hover:border-white/10'
+                          : 'bg-red-500/5 border-red-500/15'
+                      }`}
+                    >
+                      {/* Left: device + details */}
+                      <div className="flex items-center gap-4">
+                        <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-xl flex-shrink-0 ${
+                          entry.isNewIp ? 'bg-amber-500/15' : isSuccess ? 'bg-white/5' : 'bg-red-500/10'
+                        }`}>
+                          {deviceEmoji}
+                        </div>
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-bold text-sm">{entry.browser}</span>
+                            <span className="text-muted-foreground text-xs">on</span>
+                            <span className="font-bold text-sm">{entry.operatingSystem}</span>
+                            {entry.isNewIp && (
+                              <span className="px-2 py-0.5 bg-amber-500/20 text-amber-400 text-[10px] font-black uppercase tracking-widest rounded-full">
+                                🆕 New IP
+                              </span>
+                            )}
+                            {!isSuccess && (
+                              <span className="px-2 py-0.5 bg-red-500/20 text-red-400 text-[10px] font-black uppercase tracking-widest rounded-full">
+                                Failed
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-3 text-xs text-muted-foreground font-medium">
+                            <span>🌐 {entry.ipAddress}</span>
+                            <span>·</span>
+                            <span>{entry.deviceType}</span>
+                            <span>·</span>
+                            <span>{loginDate}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Right: status badge */}
+                      <div className={`flex-shrink-0 px-3 py-1.5 rounded-xl text-[11px] font-black uppercase tracking-widest ${
+                        isSuccess
+                          ? 'bg-emerald-500/15 text-emerald-400'
+                          : 'bg-red-500/15 text-red-400'
+                      }`}>
+                        {isSuccess ? '✓ Success' : '✗ Failed'}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Security tip */}
+            <div className="p-4 bg-blue-500/5 border border-blue-500/15 rounded-2xl">
+              <p className="text-xs text-blue-400 font-bold">
+                🔐 <strong>Security Tip:</strong> If you see a login you don't recognize, change your password immediately from Account Settings.
+              </p>
+            </div>
+          </div>
+        );
+
       case 'account':
         return (
           <div className="space-y-10">
@@ -231,7 +400,9 @@ const SettingsPage: React.FC = () => {
                 <div className="h-px bg-white/5 flex-1" />
               </h4>
               <div className="flex flex-wrap gap-4">
-                <Button variant="outline" className="h-14 rounded-xl px-8 border-2 border-white/5 hover:bg-white/5 font-bold">Rotate Password</Button>
+                <Button variant="outline" onClick={() => { setPwError(null); setShowPasswordModal(true); }} className="h-14 rounded-xl px-8 border-2 border-white/5 hover:bg-white/5 font-bold flex items-center gap-2">
+                  <KeyRound size={16} /> Rotate Password
+                </Button>
                 <Button variant="outline" className="h-14 rounded-xl px-8 border-2 border-white/5 hover:bg-white/5 font-bold">Enable 2FA Authentication</Button>
               </div>
             </div>
@@ -578,6 +749,7 @@ const SettingsPage: React.FC = () => {
   };
 
   return (
+    <>
     <PageWrapper>
       <div className="max-w-5xl space-y-12 pb-20">
         <header className="space-y-4">
@@ -661,6 +833,133 @@ const SettingsPage: React.FC = () => {
         </AnimatePresence>
       </div>
     </PageWrapper>
+
+    {/* ── Change Password Modal ─────────────────────────────────────── */}
+    <AnimatePresence>
+      {showPasswordModal && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm px-4"
+          onClick={(e) => { if (e.target === e.currentTarget) setShowPasswordModal(false); }}
+        >
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.9, y: 20 }}
+            transition={{ duration: 0.3, ease: 'easeOut' }}
+            className="w-full max-w-md bg-[#0f1729] border-2 border-white/10 rounded-[2rem] p-8 shadow-[0_40px_80px_rgba(0,0,0,0.6)] relative"
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between mb-8">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-primary/20 rounded-xl flex items-center justify-center">
+                  <KeyRound size={20} className="text-primary" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-black tracking-tighter">Rotate Password</h3>
+                  <p className="text-[11px] text-muted-foreground font-bold uppercase tracking-widest">Security Update</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowPasswordModal(false)}
+                className="w-9 h-9 rounded-xl bg-white/5 hover:bg-white/10 flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Error */}
+            {pwError && (
+              <div className="mb-6 p-3 bg-red-500/10 border border-red-500/30 rounded-xl text-red-400 text-sm font-bold">
+                {pwError}
+              </div>
+            )}
+
+            {/* Fields */}
+            <div className="space-y-5">
+              {/* Old Password */}
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground px-1">Current Password</label>
+                <div className="relative group">
+                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground group-focus-within:text-primary transition-colors" size={18} />
+                  <input
+                    type={showOld ? 'text' : 'password'}
+                    value={pwOld}
+                    onChange={e => setPwOld(e.target.value)}
+                    className="w-full pl-12 pr-12 py-3.5 bg-secondary/30 border-2 border-white/5 rounded-xl focus:border-primary/50 focus:outline-none focus:ring-4 focus:ring-primary/5 transition-all font-medium"
+                    placeholder="Enter current password"
+                  />
+                  <button type="button" onClick={() => setShowOld(p => !p)} className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-primary transition-colors">
+                    {showOld ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
+              </div>
+
+              {/* New Password */}
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground px-1">New Password</label>
+                <div className="relative group">
+                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground group-focus-within:text-primary transition-colors" size={18} />
+                  <input
+                    type={showNew ? 'text' : 'password'}
+                    value={pwNew}
+                    onChange={e => setPwNew(e.target.value)}
+                    className="w-full pl-12 pr-12 py-3.5 bg-secondary/30 border-2 border-white/5 rounded-xl focus:border-primary/50 focus:outline-none focus:ring-4 focus:ring-primary/5 transition-all font-medium"
+                    placeholder="Min. 8 characters"
+                  />
+                  <button type="button" onClick={() => setShowNew(p => !p)} className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-primary transition-colors">
+                    {showNew ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
+              </div>
+
+              {/* Confirm Password */}
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground px-1">Confirm New Password</label>
+                <div className="relative group">
+                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground group-focus-within:text-primary transition-colors" size={18} />
+                  <input
+                    type={showConfirm ? 'text' : 'password'}
+                    value={pwConfirm}
+                    onChange={e => setPwConfirm(e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter') handleChangePassword(); }}
+                    className="w-full pl-12 pr-12 py-3.5 bg-secondary/30 border-2 border-white/5 rounded-xl focus:border-primary/50 focus:outline-none focus:ring-4 focus:ring-primary/5 transition-all font-medium"
+                    placeholder="Repeat new password"
+                  />
+                  <button type="button" onClick={() => setShowConfirm(p => !p)} className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-primary transition-colors">
+                    {showConfirm ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="flex gap-3 mt-8">
+              <Button
+                variant="ghost"
+                onClick={() => setShowPasswordModal(false)}
+                className="flex-1 h-12 rounded-xl font-bold border-2 border-white/5"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleChangePassword}
+                disabled={pwLoading}
+                className="flex-1 h-12 rounded-xl font-black relative overflow-hidden group disabled:opacity-70"
+              >
+                <div className="absolute inset-0 bg-gradient-to-r from-primary to-blue-600 opacity-90 group-hover:opacity-100 transition-opacity" />
+                <span className="relative flex items-center justify-center gap-2">
+                  {pwLoading ? <><Loader2 size={18} className="animate-spin" /> Updating...</> : <><KeyRound size={18} /> Update Password</>}
+                </span>
+              </Button>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+    </>
   );
 };
 

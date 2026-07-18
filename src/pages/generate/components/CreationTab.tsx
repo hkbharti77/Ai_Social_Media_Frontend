@@ -357,7 +357,7 @@ const CreationTab: React.FC<CreationTabProps> = ({
                  "grid gap-6 lg:gap-8",
                  viewMode === 'grid' ? "grid-cols-1 md:grid-cols-2" : "grid-cols-1"
                )}>
-                 {generatedPosts.map((post, idx) => (
+                 {generatedPosts?.map((post, idx) => (
                    <motion.div 
                      key={idx}
                      initial={{ opacity: 0, scale: 0.95 }}
@@ -379,7 +379,7 @@ const CreationTab: React.FC<CreationTabProps> = ({
                        <div className="space-y-3">
                          <p className="text-xs font-medium leading-relaxed custom-scrollbar max-h-24 overflow-y-auto pr-2">{post.caption}</p>
                          <div className="flex flex-wrap gap-1.5">
-                           {post.hashtags.map((tag, i) => (
+                           {post.hashtags?.map((tag, i) => (
                              <span key={i} className="text-[9px] font-bold text-primary px-2 py-0.5 bg-primary/10 rounded-full border border-primary/20">{tag}</span>
                            ))}
                          </div>
@@ -424,7 +424,7 @@ const CreationTab: React.FC<CreationTabProps> = ({
                       </div>
                       
                       <div className="space-y-3">
-                         {thread.map((tweet, idx) => (
+                         {thread?.map((tweet, idx) => (
                            <div key={idx} className="flex gap-3">
                              <div className="flex flex-col items-center">
                                 <div className="w-6 h-6 rounded-full bg-secondary flex items-center justify-center text-[8px] font-black">{idx+1}</div>

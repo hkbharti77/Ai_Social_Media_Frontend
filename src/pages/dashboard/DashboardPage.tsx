@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import PageWrapper from '../../components/layout/PageWrapper';
 import { Button } from '../../components/ui/Button';
-import { 
+import {
   Plus, 
   Calendar as CalendarIcon,
   CheckCircle2,
@@ -15,7 +15,11 @@ import {
   Link as LinkIcon,
   Loader2,
   Activity,
-  FileText
+  FileText,
+  Trash2,
+  CheckSquare,
+  Square,
+  X
 } from 'lucide-react';
 import { downloadMonthlyRoiReportApi } from '../../api/reports';
 import { getBestTimeApi, type BestTimeReport } from '../../api/insights';
@@ -27,7 +31,8 @@ import PostEditorModal from '../../components/dashboard/PostEditorModal';
 import { toast } from 'sonner';
 import { 
   getPostsApi, 
-  deletePostApi, 
+  deletePostApi,
+  bulkDeletePostsApi,
   getPostStatsApi, 
   approveDraftApi,
   markEvergreenApi,
@@ -64,6 +69,11 @@ const DashboardPage: React.FC = () => {
   const [postTargetId, setPostTargetId] = useState<number | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [evergreenLoadingId, setEvergreenLoadingId] = useState<number | null>(null);
+
+  // Multi-select state
+  const [isSelectMode, setIsSelectMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false);
 
   useEffect(() => {
     fetchPosts();
@@ -246,6 +256,48 @@ const DashboardPage: React.FC = () => {
     }
   };
 
+  // ── Multi-select handlers ──────────────────────────────────────────
+  const handleToggleSelectMode = () => {
+    setIsSelectMode(prev => !prev);
+    setSelectedIds(new Set());
+  };
+
+  const handleToggleSelect = (id: number) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const handleSelectAll = () => {
+    if (selectedIds.size === filteredPosts.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(filteredPosts.map(p => p.id!).filter(Boolean)));
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.size === 0) return;
+    setIsBulkDeleting(true);
+    try {
+      const ids = Array.from(selectedIds) as number[];
+      const result = await bulkDeletePostsApi(ids);
+      toast.success(`🗑️ ${result.message}`);
+      setPosts(prev => prev.filter(p => !selectedIds.has(p.id!)));
+      setSelectedIds(new Set());
+      setIsSelectMode(false);
+      // Refresh stats
+      getPostStatsApi().then(setStats).catch(() => {});
+    } catch {
+      toast.error('Bulk delete failed. Please try again.');
+    } finally {
+      setIsBulkDeleting(false);
+    }
+  };
+
   return (
     <PageWrapper>
       {/* SVG Gradient Definitions for Evergreen Icons */}
@@ -257,6 +309,57 @@ const DashboardPage: React.FC = () => {
           </linearGradient>
         </defs>
       </svg>
+
+      {/* ── Floating Bulk Action Toolbar ─────────────────────────── */}
+      <AnimatePresence>
+        {isSelectMode && (
+          <motion.div
+            initial={{ y: 100, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: 100, opacity: 0 }}
+            transition={{ type: 'spring', damping: 20, stiffness: 200 }}
+            className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 flex items-center gap-4 px-6 py-4 bg-card/90 backdrop-blur-2xl border-2 border-white/10 rounded-[2rem] shadow-[0_30px_80px_rgba(0,0,0,0.6)]"
+          >
+            <button
+              onClick={handleSelectAll}
+              className="flex items-center gap-2.5 px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest border border-white/10 bg-white/5 hover:bg-white/10 transition-all"
+            >
+              {selectedIds.size === filteredPosts.length && filteredPosts.length > 0
+                ? <CheckSquare size={14} className="text-primary" />
+                : <Square size={14} />
+              }
+              {selectedIds.size === filteredPosts.length && filteredPosts.length > 0 ? 'Deselect All' : 'Select All'}
+            </button>
+
+            <div className="w-px h-6 bg-white/10" />
+
+            <span className="text-xs font-black text-muted-foreground min-w-[80px] text-center">
+              {selectedIds.size} Selected
+            </span>
+
+            <div className="w-px h-6 bg-white/10" />
+
+            <Button
+              onClick={handleBulkDelete}
+              disabled={selectedIds.size === 0 || isBulkDeleting}
+              className="flex items-center gap-2.5 px-6 h-10 rounded-xl text-[10px] font-black uppercase tracking-widest bg-rose-500/20 hover:bg-rose-500/30 border border-rose-500/30 text-rose-400 hover:text-rose-300 transition-all disabled:opacity-40"
+            >
+              {isBulkDeleting
+                ? <Loader2 size={14} className="animate-spin" />
+                : <Trash2 size={14} />
+              }
+              Delete {selectedIds.size > 0 ? `(${selectedIds.size})` : ''}
+            </Button>
+
+            <button
+              onClick={handleToggleSelectMode}
+              className="p-2.5 rounded-xl border border-white/10 hover:bg-white/5 text-muted-foreground hover:text-foreground transition-all"
+            >
+              <X size={14} />
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <div className="space-y-14 pb-20">
         <header className="flex flex-col md:flex-row justify-between items-start md:items-end gap-8">
@@ -465,6 +568,20 @@ const DashboardPage: React.FC = () => {
                 </button>
               ))}
             </div>
+
+            {/* Multi-Select Toggle */}
+            <button
+              onClick={handleToggleSelectMode}
+              className={cn(
+                "flex items-center gap-2.5 px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all",
+                isSelectMode
+                  ? "border-primary/50 bg-primary/10 text-primary"
+                  : "border-white/10 bg-white/5 text-muted-foreground hover:text-foreground hover:border-white/20"
+              )}
+            >
+              {isSelectMode ? <X size={14} /> : <CheckSquare size={14} />}
+              {isSelectMode ? 'Cancel' : 'Select'}
+            </button>
           </div>
 
           <AnimatePresence mode="wait">
@@ -491,12 +608,15 @@ const DashboardPage: React.FC = () => {
                     <PostCard 
                       key={post.id}
                       post={post}
-                      onEdit={handleEditPost}
-                      onDelete={handleDeletePost}
-                      onToggleEvergreen={handleToggleEvergreen}
-                      onApprove={handleApprovePost}
+                      onEdit={isSelectMode ? undefined : handleEditPost}
+                      onDelete={isSelectMode ? undefined : handleDeletePost}
+                      onToggleEvergreen={isSelectMode ? undefined : handleToggleEvergreen}
+                      onApprove={isSelectMode ? undefined : handleApprovePost}
                       evergreenLoadingId={evergreenLoadingId}
                       getStatusColor={getStatusColor}
+                      isSelectMode={isSelectMode}
+                      isSelected={selectedIds.has(post.id!)}
+                      onToggleSelect={handleToggleSelect}
                     />
                   ))}
                 </AnimatePresence>

@@ -29,10 +29,13 @@ interface PostCardProps {
   onDelete?: (id: number) => void;
   onToggleEvergreen?: (post: Post) => void;
   onApprove?: (id: number) => void;
-  onRemove?: (id: number) => void;       // Evergreen page: remove from queue
+  onRemove?: (id: number) => void;
   evergreenLoadingId?: number | null;
-  removingId?: number | null;            // Evergreen page: removing state
+  removingId?: number | null;
   getStatusColor?: (status: string) => string;
+  isSelected?: boolean;
+  onToggleSelect?: (id: number) => void;
+  isSelectMode?: boolean;
 }
 
 const PostCard: React.FC<PostCardProps> = ({
@@ -45,6 +48,9 @@ const PostCard: React.FC<PostCardProps> = ({
   evergreenLoadingId = null,
   removingId = null,
   getStatusColor,
+  isSelected = false,
+  onToggleSelect,
+  isSelectMode = false,
 }) => {
   // Evergreen mode = when onRemove is provided (used in EvergreenPage)
   const isEvergreenMode = !!onRemove;
@@ -88,13 +94,32 @@ const PostCard: React.FC<PostCardProps> = ({
       animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={{ opacity: 0, scale: 0.95 }}
       transition={{ type: 'spring', damping: 20, stiffness: 100 }}
+      onClick={() => isSelectMode && onToggleSelect && post.id && onToggleSelect(post.id)}
       className={cn(
         "group backdrop-blur-lg border-2 rounded-[3rem] overflow-hidden transition-all duration-500 flex flex-col h-full shadow-2xl relative",
-        isEvergreenMode
+        isSelectMode && "cursor-pointer",
+        isSelected
+          ? "border-primary ring-2 ring-primary/40 shadow-[0_0_40px_rgba(var(--primary),0.25)]"
+          : isEvergreenMode
           ? "bg-card/60 border-emerald-500/20 hover:border-emerald-400/50 hover:shadow-[0_30px_60px_rgba(16,185,129,0.15)]"
           : "bg-card/60 border-white/5 hover:border-primary/50 hover:shadow-[0_40px_80px_rgba(0,0,0,0.5)]"
       )}
     >
+      {/* Select Checkbox Overlay */}
+      {isSelectMode && (
+        <div className={cn(
+          "absolute top-4 right-4 z-40 w-7 h-7 rounded-xl border-2 flex items-center justify-center transition-all duration-200 shadow-xl",
+          isSelected
+            ? "bg-primary border-primary"
+            : "bg-black/40 border-white/30 backdrop-blur-md"
+        )}>
+          {isSelected && (
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+              <path d="M2.5 7L5.5 10L11.5 4" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          )}
+        </div>
+      )}
       {/* ── Image Area ─────────────────────────────────── */}
       <div className="aspect-[4/5] bg-secondary/20 relative overflow-hidden">
         {post.videoUrl ? (

@@ -72,7 +72,7 @@ const ResultsView: React.FC<ResultsViewProps> = ({
               <div className="space-y-4">
                 <p className="text-sm font-medium leading-relaxed custom-scrollbar max-h-32 overflow-y-auto pr-2">{post.caption}</p>
                 <div className="flex flex-wrap gap-2">
-                  {post.hashtags.map((tag, i) => (
+                  {post.hashtags?.map((tag, i) => (
                     <span key={i} className="text-[10px] font-bold text-primary px-3 py-1 bg-primary/10 rounded-full border border-primary/20">{tag}</span>
                   ))}
                 </div>

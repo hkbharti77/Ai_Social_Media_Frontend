@@ -19,12 +19,14 @@ import {
   Calendar,
   Zap,
   ArrowRight,
-  ChevronDown
+  ChevronDown,
+  Ticket
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '../../lib/utils';
 import { useAuth } from '../../context/useAuth';
-import { getProfile, type ProfileResponse } from '../../api/profile';
+import { useProfile } from '../../context/ProfileContext';
+import type { ProfileResponse } from '../../api/profile';
 
 const navItems = [
   { icon: LayoutDashboard, label: 'Dashboard', href: '/dashboard' },
@@ -39,30 +41,19 @@ const navItems = [
   { icon: Sparkles, label: 'Brand Voice', href: '/profile/brand-voice' },
   { icon: UserCircle, label: 'Profile', href: '/profile/setup' },
   { icon: Settings, label: 'Settings', href: '/settings' },
+  { icon: Ticket, label: 'Support', href: '/support' },
 ];
 
 import { UpgradeModal } from './UpgradeModal';
 
 const Sidebar: React.FC = () => {
   const { logout, user } = useAuth();
+  const { subscription } = useProfile();
   const location = useLocation();
   const [isOpen, setIsOpen] = useState(false);
-  const [subscription, setSubscription] = useState<ProfileResponse['subscription'] | null>(null);
   const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
   const isAdminRoute = location.pathname.startsWith('/admin');
   const [isAdminOpen, setIsAdminOpen] = useState(isAdminRoute);
-
-  React.useEffect(() => {
-    const fetchSub = async () => {
-      try {
-        const data = await getProfile();
-        setSubscription(data.subscription);
-      } catch (e) {
-        console.error('Failed to sync sidebar credits', e);
-      }
-    };
-    fetchSub();
-  }, []);
 
   const toggleSidebar = () => setIsOpen(!isOpen);
 
@@ -224,6 +215,21 @@ const Sidebar: React.FC = () => {
                       <Users size={20} />
                       <span>User Directory</span>
                     </NavLink>
+                    <NavLink
+                      to="/admin/support"
+                      onClick={() => setIsOpen(false)}
+                      className={({ isActive }) =>
+                        cn(
+                          "flex items-center gap-4 px-5 py-4 rounded-2xl transition-all duration-300 font-black uppercase tracking-widest text-[10px]",
+                          isActive 
+                            ? "bg-rose-500 text-white shadow-xl shadow-rose-500/20 scale-[1.02]" 
+                            : "text-muted-foreground hover:bg-white/5 hover:text-foreground hover:translate-x-1"
+                        )
+                      }
+                    >
+                      <Ticket size={20} />
+                      <span>Support Tickets</span>
+                    </NavLink>
                   </div>
                 </motion.div>
               )}
@@ -233,7 +239,12 @@ const Sidebar: React.FC = () => {
       </div>
       
       <nav className="flex-1 px-4 space-y-3">
-        {navItems.map((item) => (
+        {navItems.filter(item => {
+          if (item.label === 'Community' || item.label === 'Evergreen') {
+            return ['PRO', 'SUPER_PRO'].includes(subscription?.tier || 'FREE');
+          }
+          return true;
+        }).map((item) => (
           <NavLink
             key={item.href}
             to={item.href}
@@ -336,10 +347,10 @@ const PlanDetailsCard: React.FC<PlanDetailsCardProps> = ({ subscription, onUpgra
 
   const maxCredits = (() => {
     if (tier === 'FREE')      return '10';
-    if (tier === 'CREATOR')   return '1,000';
+    if (tier === 'CREATOR')   return '400';
     if (tier === 'STANDARD')  return '200';
     if (tier === 'PRO')       return '1,000';
-    if (tier === 'SUPER_PRO') return '4,000';
+    if (tier === 'SUPER_PRO') return '2,000';
     return '10';
   })();
 
@@ -435,7 +446,15 @@ const PlanDetailsCard: React.FC<PlanDetailsCardProps> = ({ subscription, onUpgra
               {/* Video Credits */}
               {isVideoTier && videoCredits.length > 0 && (
                 <div className="space-y-2 border-t border-white/5 pt-3">
-                  <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/60">Video Credits</p>
+                  <div className="flex items-center justify-between">
+                    <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/60">Video Credits</p>
+                    <NavLink
+                      to="/settings?tab=video_credits"
+                      className="text-[8px] font-black uppercase tracking-widest text-primary hover:text-primary/80 transition-colors"
+                    >
+                      Buy
+                    </NavLink>
+                  </div>
                   {videoCredits.map(v => (
                     <div key={v.label} className="flex items-center justify-between">
                       <span className={cn('text-[10px] font-black', v.color)}>{v.label}</span>

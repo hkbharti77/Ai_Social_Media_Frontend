@@ -236,29 +236,33 @@ export default function AdminUserManagement() {
 
     return (
         <PageWrapper>
-            <div className="max-w-7xl mx-auto">
-                <div className="mb-6">
-                    <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-                        User Management
-                    </h1>
-                    <p className="text-gray-600 dark:text-gray-400">
-                        Manage users, subscriptions, and credits
-                    </p>
+            <div className="max-w-[1600px] mx-auto p-8 space-y-10">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 border-b border-white/5 pb-10">
+                    <div>
+                        <h1 className="text-5xl font-black tracking-tighter flex items-center gap-4 bg-gradient-to-r from-purple-400 to-pink-500 bg-clip-text text-transparent">
+                            <Users className="text-purple-400" size={48} />
+                            DIRECTORY
+                        </h1>
+                        <p className="text-white/30 text-sm mt-2 uppercase tracking-[0.3em] font-bold">
+                            User Intelligence & Control Plane
+                        </p>
+                    </div>
                 </div>
 
             {/* Search Bar */}
-            <div className="mb-6">
+            <div className="relative group">
+                <div className="absolute inset-0 bg-gradient-to-r from-purple-500/10 to-pink-500/10 rounded-[2rem] blur-xl opacity-0 group-focus-within:opacity-100 transition-opacity" />
                 <div className="relative">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+                    <Search className="absolute left-6 top-1/2 transform -translate-y-1/2 text-white/20 group-focus-within:text-purple-400 transition-colors" size={24} />
                     <input
                         type="text"
-                        placeholder="Search by email or name..."
+                        placeholder="Scan directory by name, email or ID..."
                         value={searchQuery}
                         onChange={(e) => {
                             setSearchQuery(e.target.value);
                             setCurrentPage(0);
                         }}
-                        className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+                        className="w-full pl-16 pr-8 py-6 border border-white/5 rounded-[2.5rem] bg-[#0f172a]/50 backdrop-blur-xl text-white text-xl font-medium focus:ring-2 focus:ring-purple-500/30 focus:border-purple-500/30 transition-all placeholder:text-white/10 outline-none"
                     />
                 </div>
             </div>
@@ -283,85 +287,105 @@ export default function AdminUserManagement() {
             )}
 
             {/* Users Table */}
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
+            <div className="bg-[#0f172a]/40 backdrop-blur-xl border border-white/5 rounded-[2.5rem] overflow-hidden shadow-2xl">
                 <div className="overflow-x-auto">
-                    <table className="w-full">
-                        <thead className="bg-gray-50 dark:bg-gray-700">
-                            <tr>
-                                <th className="px-6 py-3 text-left">
+                    <table className="w-full border-collapse">
+                        <thead>
+                            <tr className="bg-white/[0.02] border-b border-white/5">
+                                <th className="px-8 py-6 text-left w-16">
                                     <input
                                         type="checkbox"
                                         checked={selectAll}
                                         onChange={toggleSelectAll}
-                                        className="w-4 h-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
+                                        className="w-5 h-5 bg-[#0f172a] border-white/10 rounded-lg text-purple-600 focus:ring-offset-0 focus:ring-purple-500/50"
                                     />
                                 </th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                                    User
+                                <th className="px-8 py-6 text-left text-xs font-black text-white/30 uppercase tracking-[0.2em]">
+                                    Identity
                                 </th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                                    Email
+                                <th className="px-8 py-6 text-left text-xs font-black text-white/30 uppercase tracking-[0.2em]">
+                                    Usage Metrics
                                 </th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                                    Tokens Used
+                                <th className="px-8 py-6 text-left text-xs font-black text-white/30 uppercase tracking-[0.2em]">
+                                    Status
                                 </th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                                    Logins
-                                </th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                <th className="px-8 py-6 text-right text-xs font-black text-white/30 uppercase tracking-[0.2em]">
                                     Actions
                                 </th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                        <tbody className="divide-y divide-white/5">
                             {loading ? (
                                 <tr>
-                                    <td colSpan={6} className="px-6 py-4 text-center text-gray-500">
-                                        Loading...
+                                    <td colSpan={5} className="px-8 py-20 text-center">
+                                        <div className="flex flex-col items-center gap-4 text-white/20">
+                                            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-purple-500"></div>
+                                            <span className="font-bold tracking-widest uppercase text-xs">Accessing Records...</span>
+                                        </div>
                                     </td>
                                 </tr>
                             ) : users?.content.length === 0 ? (
                                 <tr>
-                                    <td colSpan={6} className="px-6 py-4 text-center text-gray-500">
-                                        No users found
+                                    <td colSpan={5} className="px-8 py-20 text-center text-white/20 font-bold uppercase tracking-widest text-xs">
+                                        No matching records found in the directory
                                     </td>
                                 </tr>
                             ) : (
                                 users?.content.map((user) => (
-                                    <tr key={user.userId} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-                                        <td className="px-6 py-4 whitespace-nowrap">
+                                    <tr key={user.userId} className="hover:bg-white/[0.02] transition-colors group/row">
+                                        <td className="px-8 py-6">
                                             <input
                                                 type="checkbox"
                                                 checked={selectedUserIds.has(user.userId)}
                                                 onChange={() => toggleUserSelection(user.userId)}
-                                                className="w-4 h-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
+                                                className="w-5 h-5 bg-[#0f172a] border-white/10 rounded-lg text-purple-600 focus:ring-offset-0 focus:ring-purple-500/50 transition-all"
                                             />
                                         </td>
-                                        <td className="px-6 py-4 whitespace-nowrap">
-                                            <div className="text-sm font-medium text-gray-900 dark:text-white">
-                                                {user.fullName}
+                                        <td className="px-8 py-6">
+                                            <div className="flex flex-col">
+                                                <span className="text-lg font-bold text-white group-hover/row:text-purple-400 transition-colors">
+                                                    {user.fullName || 'Anonymous'}
+                                                </span>
+                                                <span className="text-sm text-white/30 font-medium">
+                                                    {user.email}
+                                                </span>
                                             </div>
                                         </td>
-                                        <td className="px-6 py-4 whitespace-nowrap">
-                                            <div className="text-sm text-gray-500 dark:text-gray-400">
-                                                {user.email}
+                                        <td className="px-8 py-6">
+                                            <div className="flex items-center gap-6">
+                                                <div className="flex flex-col">
+                                                    <span className="text-xs font-black text-white/20 uppercase tracking-tighter">Tokens</span>
+                                                    <span className="text-sm font-bold text-blue-400">
+                                                        {user.totalTokens?.toLocaleString() || '0'}
+                                                    </span>
+                                                </div>
+                                                <div className="flex flex-col border-l border-white/5 pl-6">
+                                                    <span className="text-xs font-black text-white/20 uppercase tracking-tighter">Sessions</span>
+                                                    <span className="text-sm font-bold text-indigo-400">
+                                                        {user.loginCount}
+                                                    </span>
+                                                </div>
                                             </div>
                                         </td>
-                                        <td className="px-6 py-4 whitespace-nowrap">
-                                            <div className="text-sm text-gray-900 dark:text-white">
-                                                {user.totalTokens?.toLocaleString() || '0'}
+                                        <td className="px-8 py-6">
+                                            <div className="flex items-center gap-2">
+                                                <div className={cn(
+                                                    "w-2 h-2 rounded-full",
+                                                    user.isActive ? "bg-emerald-500 animate-pulse" : "bg-rose-500"
+                                                )} />
+                                                <span className={cn(
+                                                    "text-[10px] font-black uppercase tracking-widest",
+                                                    user.isActive ? "text-emerald-500" : "text-rose-500"
+                                                )}>
+                                                    {user.isActive ? 'ACTIVE' : 'BANNED'}
+                                                </span>
                                             </div>
                                         </td>
-                                        <td className="px-6 py-4 whitespace-nowrap">
-                                            <div className="text-sm text-gray-900 dark:text-white">
-                                                {user.loginCount}
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm">
-                                            <div className="flex gap-2">
+                                        <td className="px-8 py-6">
+                                            <div className="flex justify-end gap-3">
                                                 <button
                                                     onClick={() => handleViewProfile(user.userId)}
-                                                    className="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded"
+                                                    className="p-3 bg-white/[0.03] text-white/40 hover:text-white hover:bg-white/10 border border-white/5 rounded-xl transition-all"
                                                     title="View Profile"
                                                 >
                                                     <Eye size={18} />
@@ -372,7 +396,7 @@ export default function AdminUserManagement() {
                                                             setShowCreditModal(true);
                                                         });
                                                     }}
-                                                    className="p-2 text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20 rounded"
+                                                    className="p-3 bg-white/[0.03] text-emerald-400/60 hover:text-emerald-400 hover:bg-emerald-500/10 border border-white/5 rounded-xl transition-all"
                                                     title="Manage Credits"
                                                 >
                                                     <CreditCard size={18} />
@@ -383,21 +407,26 @@ export default function AdminUserManagement() {
                                                             setShowSubscriptionModal(true);
                                                         });
                                                     }}
-                                                    className="p-2 text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-900/20 rounded"
+                                                    className="p-3 bg-white/[0.03] text-purple-400/60 hover:text-purple-400 hover:bg-purple-500/10 border border-white/5 rounded-xl transition-all"
                                                     title="Change Subscription"
                                                 >
                                                     <Crown size={18} />
                                                 </button>
                                                 <button
-                                                    onClick={() => handleBanUser(user.userId)}
-                                                    className="p-2 text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-900/20 rounded"
-                                                    title="Ban User"
+                                                    onClick={() => user.isActive ? handleBanUser(user.userId) : handleUnbanUser(user.userId)}
+                                                    className={cn(
+                                                        "p-3 bg-white/[0.03] border border-white/5 rounded-xl transition-all",
+                                                        user.isActive 
+                                                            ? "text-orange-400/60 hover:text-orange-400 hover:bg-orange-500/10" 
+                                                            : "text-emerald-400/60 hover:text-emerald-400 hover:bg-emerald-500/10"
+                                                    )}
+                                                    title={user.isActive ? "Ban User" : "Unban User"}
                                                 >
-                                                    <Ban size={18} />
+                                                    {user.isActive ? <Ban size={18} /> : <CheckCircle size={18} />}
                                                 </button>
                                                 <button
                                                     onClick={() => handleDeleteUser(user.userId)}
-                                                    className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded"
+                                                    className="p-3 bg-white/[0.03] text-rose-400/60 hover:text-rose-400 hover:bg-rose-500/10 border border-white/5 rounded-xl transition-all"
                                                     title="Delete User"
                                                 >
                                                     <Trash2 size={18} />

@@ -10,6 +10,7 @@ import { motion } from 'framer-motion';
 import { cn } from '../../../lib/utils';
 import { ModelSelect, type ModelOption } from '../../../components/ui/ModelSelect';
 import { type ProfileResponse } from '../../../api/profile';
+import { useProfile } from '../../../context/ProfileContext';
 import VideoCreditWalletComponent from '../../../components/ui/VideoCreditWallet';
 import { getVideoModelsApi, type VideoModel } from '../../../api/videoCredits';
 
@@ -59,6 +60,7 @@ const ReelTab: React.FC<ReelTabProps> = ({
   setSelectedVoiceMode,
   AI_MODELS
 }) => {
+  const { refreshProfile } = useProfile();
   const [reelCommand, setReelCommand] = useState('');
   const [reelResult, setReelResult] = useState<ReelResponse | null>(null);
   const [videoResult, setVideoResult] = useState<VideoGenerationResponse | null>(null);
@@ -122,6 +124,7 @@ const ReelTab: React.FC<ReelTabProps> = ({
         setVideoResult(response);
         // Refresh wallet after credit deduction
         setWalletKey(k => k + 1);
+        refreshProfile(); // Refresh sidebar
         const modelLabel = VIDEO_MODELS.find(m => m.id === selectedVideoModel)?.label || selectedVideoModel;
         toast.success(`${modelLabel} video generated! 1 credit deducted.`);
         // Show wallet warnings if any

@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { broadcastEmail, type BroadcastEmailRequest } from '../../api/admin';
+import { useState, useEffect } from 'react';
+import { broadcastEmail, getUserSummaries, type BroadcastEmailRequest } from '../../api/admin';
 import { toast } from 'react-hot-toast';
 import PageWrapper from '../../components/layout/PageWrapper';
 import { ConfirmModal } from '../../components/ui/ConfirmModal';
@@ -9,8 +9,26 @@ export default function AdminBroadcast() {
     const [subject, setSubject] = useState('');
     const [htmlBody, setHtmlBody] = useState('');
     const [targetTier, setTargetTier] = useState('ALL');
+    const [targetEmail, setTargetEmail] = useState('');
     const [sending, setSending] = useState(false);
     const [showConfirmModal, setShowConfirmModal] = useState(false);
+    const [userSummaries, setUserSummaries] = useState<{ userId: number; email: string }[]>([]);
+    const [loadingUsers, setLoadingUsers] = useState(false);
+
+    useEffect(() => {
+        const fetchUsers = async () => {
+            setLoadingUsers(true);
+            try {
+                const data = await getUserSummaries();
+                setUserSummaries(data);
+            } catch (error) {
+                console.error('Failed to fetch user summaries:', error);
+            } finally {
+                setLoadingUsers(false);
+            }
+        };
+        fetchUsers();
+    }, []);
 
     const handleSendEmail = async () => {
         if (!subject.trim()) {
@@ -34,7 +52,8 @@ export default function AdminBroadcast() {
             const request: BroadcastEmailRequest = {
                 subject,
                 htmlBody,
-                targetTier
+                targetTier,
+                targetEmail: targetTier === 'SPECIFIC' ? targetEmail : undefined
             };
             const response = await broadcastEmail(request);
             toast.success(`Email sent successfully to ${response.recipientCount} users!`);
@@ -43,6 +62,7 @@ export default function AdminBroadcast() {
             setSubject('');
             setHtmlBody('');
             setTargetTier('ALL');
+            setTargetEmail('');
         } catch (error: any) {
             toast.error(error.response?.data?.message || 'Failed to send email');
         } finally {
@@ -103,49 +123,64 @@ export default function AdminBroadcast() {
 
     return (
         <PageWrapper>
-            <div className="p-8 space-y-8 min-h-screen">
-                <div className="mb-6">
-                    <h1 className="text-4xl font-black tracking-tight flex items-center gap-3">
-                        <Mail className="text-blue-400" size={36} />
-                        BROADCAST EMAIL
-                    </h1>
-                    <p className="text-white/40 text-sm mt-1 uppercase tracking-widest font-bold">
-                        Send emails to all users or specific subscription tiers
-                    </p>
+            <div className="p-8 space-y-10 min-h-screen max-w-6xl mx-auto">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 border-b border-white/5 pb-10">
+                    <div>
+                        <h1 className="text-5xl font-black tracking-tighter flex items-center gap-4 bg-gradient-to-r from-blue-400 to-indigo-500 bg-clip-text text-transparent">
+                            <Mail className="text-blue-400" size={48} />
+                            BROADCAST
+                        </h1>
+                        <p className="text-white/30 text-sm mt-2 uppercase tracking-[0.3em] font-bold">
+                            Strategic Communication Engine
+                        </p>
+                    </div>
+                    <div className="flex items-center gap-4 px-6 py-3 bg-white/[0.02] border border-white/5 rounded-2xl">
+                        <Users className="text-blue-400/50" size={20} />
+                        <span className="text-sm font-bold text-white/40">{userSummaries.length} TOTAL USERS</span>
+                    </div>
                 </div>
 
                 {/* Warning Banner */}
-                <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-[2.5rem] p-6 mb-6">
-                    <div className="flex items-start gap-4">
-                        <AlertCircle className="text-yellow-400 flex-shrink-0 mt-1" size={24} />
+                <div className="bg-amber-500/5 border border-amber-500/10 rounded-[2rem] p-8 relative overflow-hidden group">
+                    <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
+                        <AlertCircle size={80} className="text-amber-500" />
+                    </div>
+                    <div className="flex items-start gap-6 relative z-10">
+                        <div className="w-12 h-12 rounded-2xl bg-amber-500/10 flex items-center justify-center shrink-0">
+                            <AlertCircle className="text-amber-400" size={24} />
+                        </div>
                         <div>
-                            <h3 className="font-black text-yellow-400 mb-2 text-lg uppercase tracking-tight">
-                                Important Notice
+                            <h3 className="font-black text-amber-400 mb-2 text-xl uppercase tracking-tighter">
+                                Safety Protocol
                             </h3>
-                            <p className="text-sm text-yellow-300/80">
-                                Broadcast emails are sent asynchronously. Please ensure your email content is correct before sending. 
-                                This action cannot be undone.
+                            <p className="text-amber-300/60 leading-relaxed max-w-2xl">
+                                Broadcast emails are dispatched via our asynchronous queue. Verify your content meticulously; 
+                                once the broadcast begins, it cannot be recalled or edited.
                             </p>
                         </div>
                     </div>
                 </div>
 
                 {/* Email Templates */}
-                <div className="bg-white/[0.02] border border-white/10 rounded-[2.5rem] p-8 mb-6">
-                    <h2 className="text-xl font-bold mb-6 uppercase tracking-tight">
-                        Quick Templates
-                    </h2>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="bg-[#0f172a]/40 backdrop-blur-xl border border-white/5 rounded-[2.5rem] p-10">
+                    <div className="flex items-center justify-between mb-8">
+                        <h2 className="text-2xl font-black uppercase tracking-tighter flex items-center gap-3">
+                            <Sparkles className="text-blue-400" size={24} />
+                            Quick Templates
+                        </h2>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                         {emailTemplates.map((template) => (
                             <button
                                 key={template.name}
                                 onClick={() => loadTemplate(template)}
-                                className="p-6 bg-white/[0.03] border border-white/10 rounded-3xl hover:border-blue-500/50 hover:bg-white/[0.06] transition-all text-left group"
+                                className="p-8 bg-white/[0.02] border border-white/5 rounded-[2rem] hover:border-blue-500/30 hover:bg-white/[0.05] transition-all text-left group relative overflow-hidden"
                             >
-                                <h3 className="font-bold text-lg mb-2 group-hover:text-blue-400 transition-colors">
+                                <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 blur-3xl rounded-full -mr-16 -mt-16 group-hover:bg-blue-500/10 transition-colors" />
+                                <h3 className="font-bold text-xl mb-3 group-hover:text-blue-400 transition-colors relative z-10">
                                     {template.name}
                                 </h3>
-                                <p className="text-sm text-white/40 line-clamp-2">
+                                <p className="text-sm text-white/30 line-clamp-2 leading-relaxed relative z-10">
                                     {template.subject}
                                 </p>
                             </button>
@@ -165,86 +200,115 @@ export default function AdminBroadcast() {
                             <select
                                 value={targetTier}
                                 onChange={(e) => setTargetTier(e.target.value)}
-                                className="w-full px-6 py-4 border border-white/10 rounded-3xl bg-white/[0.03] focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all font-medium"
+                                style={{ colorScheme: 'dark' }}
+                                className="w-full px-6 py-4 border border-white/10 rounded-3xl bg-[#0f172a] text-white focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all font-medium outline-none cursor-pointer hover:bg-[#1e293b]"
                             >
-                                <option value="ALL">All Users</option>
-                                <option value="FREE">FREE Tier Users</option>
-                                <option value="BASIC">BASIC Tier Users</option>
-                                <option value="PRO">PRO Tier Users</option>
-                                <option value="ENTERPRISE">ENTERPRISE Tier Users</option>
+                                <option value="ALL" className="bg-[#0f172a] text-white">All Users</option>
+                                <option value="FREE" className="bg-[#0f172a] text-white">FREE Tier Users</option>
+                                <option value="BASIC" className="bg-[#0f172a] text-white">BASIC Tier Users</option>
+                                <option value="PRO" className="bg-[#0f172a] text-white">PRO Tier Users</option>
+                                <option value="ENTERPRISE" className="bg-[#0f172a] text-white">ENTERPRISE Tier Users</option>
+                                <option value="SPECIFIC" className="bg-[#0f172a] text-white">Specific User</option>
                             </select>
                         </div>
 
+                        {/* Specific User Email Dropdown */}
+                        {targetTier === 'SPECIFIC' && (
+                            <div className="animate-in fade-in slide-in-from-top-2 duration-300">
+                                <label className="block text-sm font-black uppercase tracking-widest text-white/40 mb-3">
+                                    Select User Email *
+                                </label>
+                                <select
+                                    value={targetEmail}
+                                    onChange={(e) => setTargetEmail(e.target.value)}
+                                    style={{ colorScheme: 'dark' }}
+                                    className="w-full px-6 py-4 border border-white/10 rounded-3xl bg-[#0f172a] text-white focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all font-medium outline-none cursor-pointer hover:bg-[#1e293b]"
+                                >
+                                    <option value="" className="bg-[#0f172a] text-white">-- Choose a user email --</option>
+                                    {userSummaries.map((user) => (
+                                        <option key={user.userId} value={user.email} className="bg-[#0f172a] text-white">
+                                            {user.email}
+                                        </option>
+                                    ))}
+                                </select>
+                                {loadingUsers && (
+                                    <p className="mt-2 text-xs text-blue-400 animate-pulse">Loading users...</p>
+                                )}
+                            </div>
+                        )}
+
                         {/* Subject */}
-                        <div>
-                            <label className="block text-sm font-black uppercase tracking-widest text-white/40 mb-3">
+                        <div className="space-y-3">
+                            <label className="block text-xs font-black uppercase tracking-[0.2em] text-white/30 px-1">
                                 Email Subject *
                             </label>
                             <input
                                 type="text"
                                 value={subject}
                                 onChange={(e) => setSubject(e.target.value)}
-                                placeholder="Enter email subject..."
-                                className="w-full px-6 py-4 border border-white/10 rounded-3xl bg-white/[0.03] focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all font-medium placeholder:text-white/20"
+                                placeholder="Enter a compelling subject..."
+                                className="w-full px-8 py-5 border border-white/5 rounded-[2rem] bg-[#0f172a] focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500/30 transition-all font-bold text-lg text-white placeholder:text-white/10 outline-none"
                             />
                         </div>
 
                         {/* HTML Body */}
-                        <div>
-                            <label className="block text-sm font-black uppercase tracking-widest text-white/40 mb-3">
-                                Email Body (HTML) *
+                        <div className="space-y-3">
+                            <label className="block text-xs font-black uppercase tracking-[0.2em] text-white/30 px-1">
+                                Email Body (HTML Structure) *
                             </label>
                             <textarea
                                 value={htmlBody}
                                 onChange={(e) => setHtmlBody(e.target.value)}
-                                placeholder="Enter email body in HTML format..."
-                                rows={15}
-                                className="w-full px-6 py-4 border border-white/10 rounded-3xl bg-white/[0.03] focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all font-mono text-sm placeholder:text-white/20"
+                                placeholder="<html>...</html>"
+                                rows={12}
+                                className="w-full px-8 py-6 border border-white/5 rounded-[2rem] bg-[#0f172a] focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500/30 transition-all font-mono text-sm text-blue-100/80 placeholder:text-white/10 outline-none resize-none"
                             />
-                            <p className="mt-3 text-sm text-white/40">
-                                You can use HTML tags for formatting. Preview the email before sending.
-                            </p>
+                            <div className="flex items-center gap-2 text-xs text-white/20 px-1 italic">
+                                <AlertCircle size={12} />
+                                <span>Thymeleaf fragments and standard HTML5 are supported for responsive design.</span>
+                            </div>
                         </div>
 
                         {/* Preview */}
                         {htmlBody && (
-                            <div>
-                                <label className="block text-sm font-black uppercase tracking-widest text-white/40 mb-3">
-                                    Preview
+                            <div className="space-y-4 pt-4">
+                                <label className="block text-xs font-black uppercase tracking-[0.2em] text-white/30 px-1">
+                                    Visual Preview
                                 </label>
                                 <div 
-                                    className="p-8 border border-white/10 rounded-3xl bg-white/[0.03] overflow-auto max-h-96"
+                                    className="p-10 border border-white/5 rounded-[2.5rem] bg-white/[0.01] overflow-auto max-h-[500px] shadow-inner"
                                     dangerouslySetInnerHTML={{ __html: htmlBody }}
                                 />
                             </div>
                         )}
 
                         {/* Send Button */}
-                        <div className="flex justify-end gap-4 pt-4">
+                        <div className="flex flex-col md:flex-row justify-end gap-4 pt-10 border-t border-white/5">
                             <button
                                 onClick={() => {
                                     setSubject('');
                                     setHtmlBody('');
                                     setTargetTier('ALL');
+                                    setTargetEmail('');
                                 }}
-                                className="px-8 py-4 border border-white/10 rounded-3xl hover:bg-white/[0.05] transition-all font-bold"
+                                className="px-10 py-5 border border-white/10 rounded-full hover:bg-white/[0.05] transition-all font-bold text-white/60 hover:text-white"
                             >
-                                Clear
+                                Reset Form
                             </button>
                             <button
                                 onClick={handleSendEmail}
                                 disabled={sending || !subject.trim() || !htmlBody.trim()}
-                                className="px-8 py-4 bg-blue-600 rounded-3xl hover:bg-blue-500 disabled:opacity-30 disabled:cursor-not-allowed flex items-center gap-3 font-black shadow-lg shadow-blue-500/20 transition-all"
+                                className="px-12 py-5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-full hover:from-blue-500 hover:to-indigo-500 disabled:opacity-20 disabled:cursor-not-allowed flex items-center justify-center gap-4 font-black shadow-2xl shadow-blue-500/20 transition-all hover:scale-[1.02] active:scale-[0.98]"
                             >
                                 {sending ? (
                                     <>
                                         <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                                        Sending...
+                                        <span>INITIATING BROADCAST...</span>
                                     </>
                                 ) : (
                                     <>
-                                        <Send size={20} />
-                                        Send Email
+                                        <span>EXECUTE BROADCAST</span>
+                                        <Send size={22} className="group-hover:translate-x-1 transition-transform" />
                                     </>
                                 )}
                             </button>
@@ -258,7 +322,11 @@ export default function AdminBroadcast() {
                     onClose={() => setShowConfirmModal(false)}
                     onConfirm={confirmSendEmail}
                     title="Confirm Broadcast Email"
-                    message={`Are you sure you want to send this email to ${targetTier === 'ALL' ? 'ALL users' : targetTier + ' tier users'}? This action cannot be undone.`}
+                    message={`Are you sure you want to send this email to ${
+                        targetTier === 'SPECIFIC' ? targetEmail : 
+                        targetTier === 'ALL' ? 'ALL users' : 
+                        targetTier + ' tier users'
+                    }? This action cannot be undone.`}
                     variant="warning"
                     confirmText="Send Email"
                     cancelText="Cancel"

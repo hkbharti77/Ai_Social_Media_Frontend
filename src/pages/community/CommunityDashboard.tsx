@@ -22,8 +22,10 @@ import { cn } from '../../lib/utils';
 import { getInboxApi, syncCommentsApi, draftReplyApi, sendReplyApi } from '../../api/community';
 import type { Comment } from '../../api/community';
 import { toast } from 'sonner';
+import { useProfile } from '../../context/ProfileContext';
 
 const CommunityDashboard: React.FC = () => {
+  const { subscription } = useProfile();
   const [comments, setComments] = useState<Comment[]>([]);
   const [selectedComment, setSelectedComment] = useState<Comment | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -107,6 +109,30 @@ const CommunityDashboard: React.FC = () => {
     }
   };
 
+  const isPro = ['PRO', 'SUPER_PRO'].includes(subscription?.tier || 'FREE');
+ 
+  if (!isPro) {
+    return (
+      <PageWrapper>
+        <div className="h-[calc(100vh-120px)] flex flex-col items-center justify-center text-center space-y-8 bg-card/20 backdrop-blur-3xl rounded-[3rem] border border-white/5">
+          <div className="p-8 bg-primary/10 rounded-full text-primary animate-pulse">
+            <Zap size={64} />
+          </div>
+          <div className="max-w-md space-y-4 px-6">
+            <h1 className="text-4xl font-black italic tracking-tighter uppercase">Professional Access Required</h1>
+            <p className="text-muted-foreground font-medium">The Community Hub is a strategic tool reserved for our PRO and SUPER PRO members. Upgrade now to unlock AI-powered social engagement.</p>
+          </div>
+          <Button 
+            className="h-16 px-12 rounded-2xl text-xl font-black uppercase tracking-widest shadow-2xl shadow-primary/20"
+            onClick={() => window.location.href = '/settings?tab=subscription'}
+          >
+            Upgrade to Pro
+          </Button>
+        </div>
+      </PageWrapper>
+    );
+  }
+ 
   return (
     <PageWrapper>
       <div className="h-[calc(100vh-120px)] flex flex-col gap-6">
@@ -115,7 +141,9 @@ const CommunityDashboard: React.FC = () => {
           <div className="relative z-10">
             <h1 className="text-3xl font-black tracking-tighter flex items-center gap-3 italic">
               COMMUNITY <span className="text-primary tracking-widest not-italic">HUB</span>
-              <span className="px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-[10px] font-black uppercase tracking-[0.3em] text-primary animate-pulse ml-2">PRO VERSION</span>
+              <span className="px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-[10px] font-black uppercase tracking-[0.3em] text-primary animate-pulse ml-2">
+                {subscription?.tier.replace('_', ' ') || 'PRO'} VERSION
+              </span>
             </h1>
             <p className="text-muted-foreground text-sm font-medium">Manage your brand's reputation with AI-powered triage and empathy.</p>
           </div>
@@ -317,7 +345,9 @@ const CommunityDashboard: React.FC = () => {
                         </button>
                      </div>
                      <div className="flex items-center gap-4">
-                        <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mr-4">Pro Plan: Unmetered AI Replies</p>
+                        <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mr-4">
+                          {subscription?.tier.replace('_', ' ') || 'PRO'} PLAN: UNMETERED AI REPLIES
+                        </p>
                         <Button 
                           onClick={handleSendReply}
                           disabled={isSending || !replyText.trim() || selectedComment.isReplied}

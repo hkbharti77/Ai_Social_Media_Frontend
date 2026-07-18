@@ -33,7 +33,7 @@ export function useAiGeneration() {
       await Promise.all(targets.map(p => 
         createPostApi({
           caption: post.caption,
-          hashtags: post.hashtags.join(' '),
+          hashtags: (post.hashtags || []).join(' '),
           imageUrl: post.imageUrl || '',
           platform: p,
           status: PostStatus.DRAFT
@@ -69,7 +69,7 @@ export function useAiGeneration() {
       for (const p of targets) {
         await createPostApi({
           caption: post.caption,
-          hashtags: post.hashtags.join(' '),
+          hashtags: (post.hashtags || []).join(' '),
           imageUrl: post.imageUrl || '',
           platform: p,
           status: PostStatus.SCHEDULED,

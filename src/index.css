@@ -100,4 +100,14 @@
     scrollbar-width: thin;
     scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
   }
+
+  /* Global Select Fix for Dark Mode */
+  select {
+    color-scheme: dark;
+  }
+  
+  option {
+    background-color: #020617;
+    color: white;
+  }
 }

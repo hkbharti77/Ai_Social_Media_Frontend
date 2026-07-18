@@ -111,7 +111,7 @@ const MediaPage: React.FC = () => {
               </div>
             </h1>
             <p className="text-muted-foreground text-base md:text-lg font-medium opacity-80 max-w-xl">
-              Your collection of production-grade AI visual assets hosted on S3.
+              Your collection of production-grade AI visual assets.
             </p>
           </div>
 
@@ -262,7 +262,7 @@ const MediaPage: React.FC = () => {
             <div className="space-y-2">
               <p className="text-lg font-bold text-foreground">Are you sure?</p>
               <p className="text-muted-foreground">
-                This will permanently delete the asset from your S3 bucket. This action cannot be undone.
+                This will permanently delete the asset. This action cannot be undone.
               </p>
             </div>
           </div>

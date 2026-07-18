@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { toast } from 'react-hot-toast';
 
 const instance = axios.create({
   baseURL: import.meta.env.VITE_API_URL || '',
@@ -24,6 +25,30 @@ instance.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
+    // Handle 429 Too Many Requests (AI Overload)
+    if (error.response?.status === 429) {
+      const retryAfter = parseInt(error.response.headers['retry-after'] || '5', 10);
+      const message = error.response.data?.message || `AI systems are busy. Retrying in ${retryAfter}s...`;
+      
+      const toastId = toast.loading(message, {
+        icon: '⏳',
+        style: {
+          borderRadius: '10px',
+          background: '#333',
+          color: '#fff',
+        },
+      });
+      
+      console.warn(`🚀 AI Overload [429]: ${message}. Trace: ${error.response.data?.traceId}`);
+      
+      return new Promise((resolve) => {
+        setTimeout(() => {
+          toast.dismiss(toastId);
+          resolve(instance(originalRequest));
+        }, retryAfter * 1000);
+      });
+    }
+
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
       try {
@@ -53,6 +78,9 @@ instance.interceptors.response.use(
         window.location.href = '/login';
         return Promise.reject(refreshError);
       }
+    }
+    if (error.response?.data?.traceId) {
+      console.error(`❌ API Error [TraceID: ${error.response.data.traceId}]`, error.response.data);
     }
     return Promise.reject(error);
   }

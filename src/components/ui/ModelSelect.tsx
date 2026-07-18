@@ -10,6 +10,7 @@ export interface ModelOption {
   tier: number;
   icon: React.ElementType;
   desc: string;
+  healthScore?: number; // 0 to 1, where 1 is healthy
 }
 
 interface ModelSelectProps {
@@ -78,7 +79,7 @@ export const ModelSelect: React.FC<ModelSelectProps> = ({
             className="absolute top-full left-0 right-0 mt-3 bg-card/95 backdrop-blur-2xl border-2 border-white/5 p-2 rounded-[1.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.5)] z-50 space-y-1 overflow-hidden"
           >
             <div className="max-h-[300px] overflow-y-auto pr-1 custom-scrollbar">
-              {options.map((model) => {
+              {options?.map((model) => {
                 const isLocked = userTierOrdinal < model.tier && !purchasedModelIds.includes(model.id);
                 const isSelected = selectedId === model.id;
 
@@ -107,6 +108,9 @@ export const ModelSelect: React.FC<ModelSelectProps> = ({
                         <div className="flex items-center gap-2">
                            <span className="text-[11px] font-black uppercase italic tracking-tight">{model.name}</span>
                            {isLocked && <Lock size={10} className="text-rose-500" />}
+                           {model.healthScore !== undefined && model.healthScore < 0.6 && (
+                             <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" title="High Latency" />
+                           )}
                         </div>
                         <span className="text-[9px] font-medium opacity-60">{model.desc}</span>
                       </div>

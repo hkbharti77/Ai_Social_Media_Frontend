@@ -23,6 +23,7 @@ import {
 } from '../../api/posts';
 import { useNavigate } from 'react-router-dom';
 import PostCard from '../../components/dashboard/PostCard';
+import { useProfile } from '../../context/ProfileContext';
 
 const EvergreenPage: React.FC = () => {
   const [posts, setPosts] = useState<Post[]>([]);
@@ -30,6 +31,7 @@ const EvergreenPage: React.FC = () => {
   const [fillingSlot, setFillingSlot] = useState<'MORNING' | 'EVENING' | null>(null);
   const [removingId, setRemovingId] = useState<number | null>(null);
   const navigate = useNavigate();
+  const { subscription } = useProfile();
 
   useEffect(() => {
     fetchEvergreen();
@@ -79,6 +81,30 @@ const EvergreenPage: React.FC = () => {
 
   const totalRecycled = posts.filter(p => p.lastRecycledAt).length;
   const nextFillDay = 'Tuesday';
+
+  const isPro = ['PRO', 'SUPER_PRO'].includes(subscription?.tier || 'FREE');
+
+  if (!isPro) {
+    return (
+      <PageWrapper>
+        <div className="h-[calc(100vh-120px)] flex flex-col items-center justify-center text-center space-y-8 bg-card/20 backdrop-blur-3xl rounded-[3rem] border border-white/5">
+          <div className="p-8 bg-emerald-500/10 rounded-full text-emerald-500 animate-pulse">
+            <Leaf size={64} />
+          </div>
+          <div className="max-w-md space-y-4 px-6">
+            <h1 className="text-4xl font-black italic tracking-tighter uppercase text-emerald-400">Evergreen Access Required</h1>
+            <p className="text-muted-foreground font-medium">The Evergreen Queue is an automation feature reserved for our PRO and SUPER PRO members. Upgrade now to recycle your best content automatically.</p>
+          </div>
+          <Button 
+            className="h-16 px-12 rounded-2xl text-xl font-black uppercase tracking-widest shadow-2xl shadow-emerald-500/20 bg-emerald-500 hover:bg-emerald-600"
+            onClick={() => window.location.href = '/settings?tab=subscription'}
+          >
+            Upgrade to Pro
+          </Button>
+        </div>
+      </PageWrapper>
+    );
+  }
 
   return (
     <PageWrapper>

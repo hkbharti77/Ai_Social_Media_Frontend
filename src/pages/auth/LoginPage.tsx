@@ -100,6 +100,11 @@ const LoginPage: React.FC = () => {
                 />
               </div>
               {errors.password && <p className="mt-2 text-xs font-bold text-rose-500 px-1">{errors.password.message}</p>}
+              <div className="text-right pt-1">
+                <Link to="/forgot-password" className="text-xs font-bold text-muted-foreground hover:text-primary transition-colors">
+                  Forgot Password?
+                </Link>
+              </div>
             </div>
           </div>
 

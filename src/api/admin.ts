@@ -236,7 +236,8 @@ export interface SubscriptionChangeRequest {
 export interface BroadcastEmailRequest {
     subject: string;
     htmlBody: string;
-    targetTier: string; // "ALL" or specific tier
+    targetTier: string; // "ALL", specific tier, or "SPECIFIC"
+    targetEmail?: string; // Optional, used if targetTier is "SPECIFIC"
 }
 
 export interface BroadcastEmailResponse {
@@ -432,5 +433,11 @@ export const broadcastEmail = async (request: BroadcastEmailRequest): Promise<Br
 // System Stats
 export const getSystemStats = async (): Promise<SystemStats> => {
     const response = await axios.get('/admin/system/stats');
+    return response.data;
+};
+
+// User Summaries for dropdowns
+export const getUserSummaries = async (): Promise<{ userId: number; email: string }[]> => {
+    const response = await axios.get('/admin/users/summaries');
     return response.data;
 };

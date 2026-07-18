@@ -105,7 +105,7 @@ const StoryTab: React.FC<StoryTabProps> = ({
     try {
       await createPostApi({
         caption: storyResult.caption,
-        hashtags: storyResult.hashtags.join(' '),
+        hashtags: (storyResult.hashtags || []).join(' '),
         imageUrl: storyResult.imageUrl || '',
         platform: selectedPlatforms.includes('IG') ? 'INSTAGRAM' : 'FACEBOOK',
         status: status,
@@ -296,7 +296,7 @@ const StoryTab: React.FC<StoryTabProps> = ({
                              {storyResult.caption}
                           </p>
                           <div className="mt-6 flex flex-wrap gap-2">
-                             {storyResult.hashtags.map((tag, i) => (
+                             {storyResult.hashtags?.map((tag, i) => (
                                 <span key={i} className="text-[10px] font-black italic text-primary px-3 py-1 bg-primary/10 rounded-full border border-primary/20">#{tag}</span>
                              ))}
                           </div>

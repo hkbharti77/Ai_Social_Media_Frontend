@@ -108,3 +108,8 @@ export const getSuggestedTimes = async (): Promise<SuggestedTimes> => {
   const response = await axios.get<SuggestedTimes>('/profile/suggest-best-time');
   return response.data;
 };
+
+export const changePasswordApi = async (oldPassword: string, newPassword: string): Promise<{ message: string }> => {
+  const response = await axios.post<{ message: string }>('/profile/change-password', { oldPassword, newPassword });
+  return response.data;
+};
